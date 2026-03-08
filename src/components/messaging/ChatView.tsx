@@ -366,7 +366,40 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     }
   };
 
+  // Resolve caller profile for incoming call
+  const incomingCallerProfile = incomingCall ? profileByUserId[incomingCall.callerId] || null : null;
+  const remoteCallProfile = webrtc.remoteUserId ? profileByUserId[webrtc.remoteUserId] || otherUser : otherUser;
+
   return (
+    <>
+      {/* Incoming call overlay */}
+      {incomingCall && (
+        <IncomingCallDialog
+          callerProfile={incomingCallerProfile}
+          callType={incomingCall.callType}
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+        />
+      )}
+
+      {/* Active call screen */}
+      {webrtc.callStatus !== "idle" && webrtc.callStatus !== "ended" && (
+        <CallScreen
+          callStatus={webrtc.callStatus}
+          callType={webrtc.callType}
+          remoteProfile={remoteCallProfile}
+          isMuted={webrtc.isMuted}
+          isVideoOff={webrtc.isVideoOff}
+          callDuration={webrtc.callDuration}
+          localVideoRef={webrtc.localVideoRef}
+          remoteVideoRef={webrtc.remoteVideoRef}
+          remoteStream={webrtc.remoteStream}
+          onToggleMute={webrtc.toggleMute}
+          onToggleVideo={webrtc.toggleVideo}
+          onEndCall={() => webrtc.endCall()}
+        />
+      )}
+
     <div className="flex-1 flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
