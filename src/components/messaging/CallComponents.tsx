@@ -7,6 +7,8 @@ import {
   Mic,
   MicOff,
   SwitchCamera,
+  MonitorUp,
+  MonitorOff,
 } from "lucide-react";
 import type { CallStatus, CallType } from "@/hooks/useWebRTC";
 import type { UserProfile } from "@/lib/messaging";

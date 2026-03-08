@@ -604,6 +604,81 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     }
   }, [facingMode]);
 
+  // Screen sharing
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+
+  const toggleScreenShare = useCallback(async () => {
+    if (!localStreamRef.current) return;
+
+    if (isScreenSharing) {
+      // Stop screen share, revert to camera
+      const camStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facingMode, width: 640, height: 480 },
+      });
+      const camTrack = camStream.getVideoTracks()[0];
+      const screenTrack = localStreamRef.current.getVideoTracks()[0];
+
+      // Replace in all peer connections
+      const replacers: Promise<void>[] = [];
+      if (pcRef.current) {
+        const sender = pcRef.current.getSenders().find(s => s.track?.kind === "video");
+        if (sender) replacers.push(sender.replaceTrack(camTrack));
+      }
+      groupPcsRef.current.forEach((pc) => {
+        const sender = pc.getSenders().find(s => s.track?.kind === "video");
+        if (sender) replacers.push(sender.replaceTrack(camTrack));
+      });
+      await Promise.all(replacers);
+
+      if (screenTrack) screenTrack.stop();
+      localStreamRef.current.removeTrack(screenTrack);
+      localStreamRef.current.addTrack(camTrack);
+      if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
+
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(t => t.stop());
+        screenStreamRef.current = null;
+      }
+      setIsScreenSharing(false);
+      setIsVideoOff(false);
+    } else {
+      // Start screen share
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        screenStreamRef.current = screenStream;
+        const screenTrack = screenStream.getVideoTracks()[0];
+        const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+
+        // Replace in all peer connections
+        const replacers: Promise<void>[] = [];
+        if (pcRef.current) {
+          const sender = pcRef.current.getSenders().find(s => s.track?.kind === "video");
+          if (sender) replacers.push(sender.replaceTrack(screenTrack));
+        }
+        groupPcsRef.current.forEach((pc) => {
+          const sender = pc.getSenders().find(s => s.track?.kind === "video");
+          if (sender) replacers.push(sender.replaceTrack(screenTrack));
+        });
+        await Promise.all(replacers);
+
+        if (oldVideoTrack) oldVideoTrack.stop();
+        localStreamRef.current.removeTrack(oldVideoTrack);
+        localStreamRef.current.addTrack(screenTrack);
+        if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
+
+        // When user stops sharing via browser UI
+        screenTrack.onended = () => {
+          toggleScreenShare();
+        };
+
+        setIsScreenSharing(true);
+      } catch {
+        // User cancelled the screen share picker
+      }
+    }
+  }, [isScreenSharing, facingMode]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => cleanup();
@@ -619,6 +694,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     callDuration,
     isGroupCall,
     participantCount,
+    isScreenSharing,
     localVideoRef,
     remoteVideoRef,
     remoteStream: remoteStreamRef.current,
@@ -631,5 +707,6 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     toggleMute,
     toggleVideo,
     flipCamera,
+    toggleScreenShare,
   };
 }
