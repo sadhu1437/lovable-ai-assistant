@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Users, Crown, Shield, UserPlus, UserMinus, ChevronUp, ChevronDown, X, Info } from "lucide-react";
+import { Users, Crown, Shield, UserPlus, UserMinus, ChevronUp, ChevronDown, X, Info, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,7 @@ interface GroupInfoPanelProps {
   room: ChatRoom;
   currentUserId: string;
   onlineUsers: Set<string>;
+  onStartDM?: (userId: string) => void;
 }
 
 interface MemberWithProfile {
@@ -36,7 +37,7 @@ interface MemberWithProfile {
   profile: UserProfile | null;
 }
 
-export function GroupInfoPanel({ room, currentUserId, onlineUsers }: GroupInfoPanelProps) {
+export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: GroupInfoPanelProps) {
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
