@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Users, Crown, Shield, UserPlus, UserMinus, ChevronUp, ChevronDown, X, Info, MessageCircle } from "lucide-react";
+import { Users, Crown, Shield, UserPlus, UserMinus, ChevronUp, ChevronDown, X, Info, MessageCircle, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { OnlineIndicator } from "./OnlineIndicator";
-import { searchUsers, fetchProfilesByUserIds, type ChatRoom, type UserProfile, type ChatRoomMember } from "@/lib/messaging";
+import { searchUsers, fetchProfilesByUserIds, BOT_USERNAME, type ChatRoom, type UserProfile, type ChatRoomMember } from "@/lib/messaging";
 import {
   Sheet,
   SheetContent,
