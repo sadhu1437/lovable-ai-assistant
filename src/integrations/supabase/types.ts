@@ -250,6 +250,7 @@ export type Database = {
           created_at: string
           edited_at: string | null
           id: string
+          metadata: Json | null
           role: string
         }
         Insert: {
@@ -258,6 +259,7 @@ export type Database = {
           created_at?: string
           edited_at?: string | null
           id?: string
+          metadata?: Json | null
           role: string
         }
         Update: {
@@ -266,6 +268,7 @@ export type Database = {
           created_at?: string
           edited_at?: string | null
           id?: string
+          metadata?: Json | null
           role?: string
         }
         Relationships: [

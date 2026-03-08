@@ -133,20 +133,20 @@ export function generateId() {
 const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/image-generate`;
 
 const IMAGE_TRIGGERS = [
-  /generate\s+(an?\s+)?image/i,
-  /create\s+(an?\s+)?image/i,
-  /draw\s+(me\s+)?(an?\s+)?/i,
-  /make\s+(an?\s+)?image/i,
-  /generate\s+(an?\s+)?picture/i,
-  /create\s+(an?\s+)?picture/i,
+  /generate\s+(an?\s+)?([\w\s]+\s+)?image/i,
+  /create\s+(an?\s+)?([\w\s]+\s+)?image/i,
+  /draw\s+(me\s+)?(an?\s+)?([\w\s]+\s+)?/i,
+  /make\s+(an?\s+)?([\w\s]+\s+)?image/i,
+  /generate\s+(an?\s+)?([\w\s]+\s+)?picture/i,
+  /create\s+(an?\s+)?([\w\s]+\s+)?picture/i,
   /imagine\s+/i,
-  /show\s+me\s+(an?\s+)?image/i,
+  /show\s+me\s+(an?\s+)?([\w\s]+\s+)?image/i,
   /visualize\s+/i,
-  /paint\s+/i,
-  /sketch\s+/i,
-  /design\s+(an?\s+)?image/i,
-  /generate\s+(an?\s+)?photo/i,
-  /create\s+(an?\s+)?illustration/i,
+  /paint\s+(an?\s+)?([\w\s]+\s+)?/i,
+  /sketch\s+(an?\s+)?([\w\s]+\s+)?/i,
+  /design\s+(an?\s+)?([\w\s]+\s+)?image/i,
+  /generate\s+(an?\s+)?([\w\s]+\s+)?photo/i,
+  /create\s+(an?\s+)?([\w\s]+\s+)?illustration/i,
 ];
 
 export function isImageRequest(text: string): boolean {
