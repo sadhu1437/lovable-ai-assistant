@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square, Pencil, Pin, PinOff, Check, X, MoreVertical, SmilePlus, Reply } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square, Pencil, Pin, PinOff, Check, X, MoreVertical, SmilePlus, Reply, Phone, Video } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -31,6 +31,8 @@ import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { useElevenLabsTTS } from "@/hooks/useElevenLabsTTS";
 import { VoiceSelector } from "./VoiceSelector";
 import { exportMessageAsPdf, exportMessagesToPdf } from "@/lib/exportPdf";
+import { useWebRTC, type CallType } from "@/hooks/useWebRTC";
+import { IncomingCallDialog, CallScreen } from "./CallComponents";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,6 +80,64 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
   const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
   const { speaking, speak } = useTextToSpeech();
+
+  // WebRTC calling
+  const webrtc = useWebRTC({ currentUserId });
+  const [incomingCall, setIncomingCall] = useState<{ id: string; callerId: string; callType: CallType } | null>(null);
+
+  // Listen for incoming calls
+  useEffect(() => {
+    if (!currentUserId) return;
+    const channel = supabase
+      .channel("incoming-calls")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "calls", filter: `callee_id=eq.${currentUserId}` },
+        (payload) => {
+          const call = payload.new as any;
+          if (call.status === "ringing") {
+            setIncomingCall({ id: call.id, callerId: call.caller_id, callType: call.call_type });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "calls", filter: `callee_id=eq.${currentUserId}` },
+        (payload) => {
+          const call = payload.new as any;
+          if (["ended", "missed", "rejected"].includes(call.status) && incomingCall?.id === call.id) {
+            setIncomingCall(null);
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUserId, incomingCall?.id]);
+
+  const handleStartCall = async (type: CallType) => {
+    if (!otherUserId || isBot) return;
+    try {
+      await webrtc.startCall(room.id, otherUserId, type);
+    } catch {
+      toast.error("Failed to start call. Check microphone/camera permissions.");
+    }
+  };
+
+  const handleAcceptCall = async () => {
+    if (!incomingCall) return;
+    try {
+      await webrtc.answerCall(incomingCall.id, incomingCall.callType);
+      setIncomingCall(null);
+    } catch {
+      toast.error("Failed to answer call");
+    }
+  };
+
+  const handleRejectCall = async () => {
+    if (!incomingCall) return;
+    await webrtc.rejectCall(incomingCall.id);
+    setIncomingCall(null);
+  };
   const elevenLabs = useElevenLabsTTS();
 
   // Load reactions when messages change
@@ -306,7 +366,40 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     }
   };
 
+  // Resolve caller profile for incoming call
+  const incomingCallerProfile = incomingCall ? profileByUserId[incomingCall.callerId] || null : null;
+  const remoteCallProfile = webrtc.remoteUserId ? profileByUserId[webrtc.remoteUserId] || otherUser : otherUser;
+
   return (
+    <>
+      {/* Incoming call overlay */}
+      {incomingCall && (
+        <IncomingCallDialog
+          callerProfile={incomingCallerProfile}
+          callType={incomingCall.callType}
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+        />
+      )}
+
+      {/* Active call screen */}
+      {webrtc.callStatus !== "idle" && webrtc.callStatus !== "ended" && (
+        <CallScreen
+          callStatus={webrtc.callStatus}
+          callType={webrtc.callType}
+          remoteProfile={remoteCallProfile}
+          isMuted={webrtc.isMuted}
+          isVideoOff={webrtc.isVideoOff}
+          callDuration={webrtc.callDuration}
+          localVideoRef={webrtc.localVideoRef}
+          remoteVideoRef={webrtc.remoteVideoRef}
+          remoteStream={webrtc.remoteStream}
+          onToggleMute={webrtc.toggleMute}
+          onToggleVideo={webrtc.toggleVideo}
+          onEndCall={() => webrtc.endCall()}
+        />
+      )}
+
     <div className="flex-1 flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
@@ -340,6 +433,31 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             {getStatusText()}
           </p>
         </div>
+        {/* Call buttons (DM only, not bot) */}
+        {room.type === "dm" && !isBot && otherUserId && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              title="Audio call"
+              onClick={() => handleStartCall("audio")}
+              disabled={webrtc.callStatus !== "idle"}
+            >
+              <Phone className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              title="Video call"
+              onClick={() => handleStartCall("video")}
+              disabled={webrtc.callStatus !== "idle"}
+            >
+              <Video className="w-4 h-4" />
+            </Button>
+          </>
+        )}
         <VoiceSelector value={elevenLabs.voiceId} onChange={elevenLabs.setVoiceId} />
         <GroupInfoPanel room={room} currentUserId={currentUserId} onlineUsers={onlineUsers} onStartDM={onStartDM} />
         {messages.length > 0 && (
@@ -685,5 +803,6 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 }
