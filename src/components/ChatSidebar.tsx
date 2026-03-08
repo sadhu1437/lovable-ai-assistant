@@ -119,6 +119,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
         {user && (
           <button
             onClick={() => navigate("/settings")}
+            onMouseEnter={() => prefetchRoute("/settings")}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-sm text-foreground transition-all"
           >
             <Settings className="w-4 h-4" />
