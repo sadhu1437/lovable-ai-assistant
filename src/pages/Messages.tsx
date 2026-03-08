@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { RoomList } from "@/components/messaging/RoomList";
+import { MessageSearch } from "@/components/messaging/MessageSearch";
 import { ChatView } from "@/components/messaging/ChatView";
 import { NewChatDialog } from "@/components/messaging/NewChatDialog";
 import { usePresence, useReadReceipts } from "@/hooks/usePresence";
