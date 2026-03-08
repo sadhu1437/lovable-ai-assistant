@@ -364,18 +364,24 @@ const Index = () => {
     }
 
     const isImage = file.type.startsWith("image/");
+    const isBinary = file.type.startsWith("application/pdf") || 
+                     file.type.startsWith("application/vnd") ||
+                     file.type.startsWith("application/msword") ||
+                     file.name.endsWith(".pdf") || file.name.endsWith(".doc") || file.name.endsWith(".docx");
     let fileContent: string;
     let dataUrl: string | undefined;
+    const fileType = file.type || guessFileType(file.name);
 
     try {
-      if (isImage) {
+      if (isImage || isBinary) {
         fileContent = await readFileAsDataUrl(file);
-        dataUrl = fileContent;
+        dataUrl = isImage ? fileContent : undefined;
       } else {
         fileContent = await readFileAsText(file);
       }
-    } catch {
-      toast.error("Failed to read file");
+    } catch (err) {
+      console.error("File read error:", err);
+      toast.error("Failed to read file. Try a different format.");
       return;
     }
 
@@ -383,7 +389,7 @@ const Index = () => {
       id: generateId(),
       role: "user",
       content: prompt ? `📎 **${file.name}** — ${prompt}` : `📎 **${file.name}**`,
-      filePreview: { name: file.name, type: file.type, isImage, dataUrl },
+      filePreview: { name: file.name, type: fileType, isImage, dataUrl },
       timestamp: new Date(),
     };
 
