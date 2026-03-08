@@ -496,7 +496,9 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             </Button>
           </>
         )}
-        <VoiceSelector value={elevenLabs.voiceId} onChange={elevenLabs.setVoiceId} />
+        <div className="hidden md:block">
+          <VoiceSelector value={elevenLabs.voiceId} onChange={elevenLabs.setVoiceId} />
+        </div>
         <GroupInfoPanel room={room} currentUserId={currentUserId} onlineUsers={onlineUsers} onStartDM={onStartDM} />
         {messages.length > 0 && (
           <Button
