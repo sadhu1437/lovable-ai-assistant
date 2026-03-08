@@ -136,6 +136,14 @@ export const audioCache = new LRUCache<Blob>(50 * 1024 * 1024, "Audio (TTS)", DE
 // 5MB generic data cache — 2 min TTL
 export const dataCache = new LRUCache<unknown>(5 * 1024 * 1024, "Data (Profiles & Rooms)", DEFAULT_TTL.data);
 
+// Restore user-configured TTLs from localStorage
+try {
+  const savedAudio = localStorage.getItem("nexus-cache-ttl-audio");
+  if (savedAudio) audioCache.setDefaultTTL(Number(savedAudio));
+  const savedData = localStorage.getItem("nexus-cache-ttl-data");
+  if (savedData) dataCache.setDefaultTTL(Number(savedData));
+} catch {}
+
 /** All caches registered for the stats UI */
 export const ALL_CACHES = [audioCache, dataCache] as const;
 
