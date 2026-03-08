@@ -3,6 +3,7 @@ export type Message = {
   role: "user" | "assistant";
   content: string;
   images?: string[];
+  videoUrl?: string;
   timestamp: Date;
 };
 
@@ -21,6 +22,14 @@ export type Category = {
   description: string;
 };
 
+export type AIModel = {
+  id: string;
+  label: string;
+  provider: string;
+  icon: string;
+  description: string;
+};
+
 export const categories: Category[] = [
   { id: "general", label: "General", icon: "⚡", description: "Any topic, no limits" },
   { id: "coding", label: "Coding", icon: "💻", description: "Code solutions & debugging" },
@@ -29,17 +38,31 @@ export const categories: Category[] = [
   { id: "education", label: "Education", icon: "📚", description: "Learn anything" },
 ];
 
+export const aiModels: AIModel[] = [
+  { id: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", icon: "✦", description: "Fast & capable (default)" },
+  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", provider: "Google", icon: "✦", description: "Top-tier reasoning & multimodal" },
+  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", icon: "✦", description: "Balanced speed & quality" },
+  { id: "google/gemini-2.5-flash-lite", label: "Gemini Lite", provider: "Google", icon: "✦", description: "Ultra-fast, lightweight tasks" },
+  { id: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", provider: "Google", icon: "✦", description: "Next-gen reasoning" },
+  { id: "openai/gpt-5", label: "GPT-5", provider: "OpenAI", icon: "◉", description: "Powerful all-rounder" },
+  { id: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", icon: "◉", description: "Strong & cost-effective" },
+  { id: "openai/gpt-5-nano", label: "GPT-5 Nano", provider: "OpenAI", icon: "◉", description: "Speed-optimized" },
+  { id: "openai/gpt-5.2", label: "GPT-5.2", provider: "OpenAI", icon: "◉", description: "Latest enhanced reasoning" },
+];
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export async function streamChat({
   messages,
   category,
+  model,
   onDelta,
   onDone,
   onError,
 }: {
   messages: { role: string; content: string }[];
   category: string;
+  model?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
@@ -51,7 +74,7 @@ export async function streamChat({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages, category }),
+      body: JSON.stringify({ messages, category, model }),
     });
 
     if (!resp.ok) {
@@ -123,6 +146,56 @@ const IMAGE_TRIGGERS = [
 
 export function isImageRequest(text: string): boolean {
   return IMAGE_TRIGGERS.some((re) => re.test(text));
+}
+
+const VIDEO_TRIGGERS = [
+  /generate\s+(an?\s+)?video/i,
+  /create\s+(an?\s+)?video/i,
+  /make\s+(an?\s+)?video/i,
+  /animate\s+/i,
+  /create\s+(an?\s+)?animation/i,
+  /generate\s+(an?\s+)?animation/i,
+  /make\s+(an?\s+)?clip/i,
+  /generate\s+(an?\s+)?clip/i,
+  /text[\s-]to[\s-]video/i,
+];
+
+export function isVideoRequest(text: string): boolean {
+  return VIDEO_TRIGGERS.some((re) => re.test(text));
+}
+
+const VIDEO_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/video-generate`;
+
+export async function generateVideo({
+  prompt,
+  onResult,
+  onError,
+}: {
+  prompt: string;
+  onResult: (text: string, videoUrl: string) => void;
+  onError: (error: string) => void;
+}) {
+  try {
+    const resp = await fetch(VIDEO_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      onError(data.error || `Error ${resp.status}`);
+      return;
+    }
+
+    const data = await resp.json();
+    onResult(data.text || "Here's your generated video:", data.videoUrl || "");
+  } catch (e) {
+    onError(e instanceof Error ? e.message : "Unknown error");
+  }
 }
 
 export async function generateImage({

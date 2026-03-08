@@ -5,7 +5,7 @@ import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
-import { streamChat, generateId, isImageRequest, generateImage } from "@/lib/chat";
+import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo } from "@/lib/chat";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ const Index = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [category, setCategory] = useState("general");
+  const [model, setModel] = useState("google/gemini-3-flash-preview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showGallery, setShowGallery] = useState(false);
   const [isEditingImage, setIsEditingImage] = useState(false);
@@ -175,6 +176,47 @@ const Index = () => {
       return;
     }
 
+    // Check if this is a video generation request
+    if (isVideoRequest(content)) {
+      await generateVideo({
+        prompt: content,
+        onResult: async (text, videoUrl) => {
+          const assistantMsg: Message = {
+            id: localAssistantId,
+            role: "assistant",
+            content: text,
+            videoUrl: videoUrl || undefined,
+            timestamp: new Date(),
+          };
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === convId
+                ? { ...c, messages: [...c.messages, assistantMsg] }
+                : c
+            )
+          );
+          setIsLoading(false);
+          if (user) {
+            try {
+              const dbId = await saveMessage(convId!, "assistant", text);
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === convId
+                    ? { ...c, messages: c.messages.map((m) => m.id === localAssistantId ? { ...m, id: dbId } : m) }
+                    : c
+                )
+              );
+            } catch { /* non-critical */ }
+          }
+        },
+        onError: (err) => {
+          setIsLoading(false);
+          toast.error(err);
+        },
+      });
+      return;
+    }
+
     const existingMessages = conversationsRef.current.find((c) => c.id === convId)?.messages || [];
     const allMessages = [
       ...existingMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -184,6 +226,7 @@ const Index = () => {
     await streamChat({
       messages: allMessages,
       category,
+      model,
       onDelta: (delta) => {
         setConversations((prev) =>
           prev.map((c) => {
@@ -337,7 +380,7 @@ const Index = () => {
         ) : !activeConv || activeConv.messages.length === 0 ? (
           <>
             <WelcomeScreen onPrompt={sendMessage} />
-            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} />
+            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
           </>
         ) : (
           <>
@@ -353,7 +396,7 @@ const Index = () => {
               {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && <TypingIndicator />}
               <div ref={messagesEndRef} />
             </div>
-            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} />
+            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
           </>
         )}
       </div>
