@@ -211,6 +211,16 @@ export default function Messages() {
             }
             setBotLoading(false);
           }}
+          onDeleteRoom={async (roomId) => {
+            const { success, error } = await deleteChatRoom(roomId);
+            if (error || !success) {
+              toast.error("Failed to delete conversation");
+            } else {
+              toast.success("Conversation deleted");
+              if (activeRoomId === roomId) setActiveRoomId(null);
+              setRooms((prev) => prev.filter((r) => r.id !== roomId));
+            }
+          }}
           roomProfiles={roomProfiles}
           currentUserId={user.id}
           onlineUsers={onlineUsers}
