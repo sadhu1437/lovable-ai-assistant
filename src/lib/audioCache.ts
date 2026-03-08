@@ -1,8 +1,18 @@
 /**
- * Global LRU cache with TTL support for audio blobs and generic data.
+ * Global LRU cache with TTL support and IndexedDB persistence.
  * Memory-bounded: evicts least-recently-used entries when full.
  * TTL: entries auto-expire after a configurable duration.
+ * Persistence: entries are synced to IndexedDB for survival across page reloads.
  */
+
+import {
+  persistAudioEntry,
+  persistDataEntry,
+  removePersistedEntry,
+  loadPersistedEntries,
+  clearPersistedCache,
+  getPersistedStats,
+} from "@/lib/idbCache";
 
 interface CacheEntry<T> {
   key: string;
@@ -20,15 +30,23 @@ export const DEFAULT_TTL = {
 
 export class LRUCache<T> {
   readonly label: string;
+  readonly persistStore: "audio" | "data" | null;
   private map = new Map<string, CacheEntry<T>>();
   private maxBytes: number;
   private currentBytes = 0;
   private defaultTTL: number;
+  private _hydrated = false;
 
-  constructor(maxBytes: number, label: string = "cache", defaultTTL: number = DEFAULT_TTL.data) {
+  constructor(
+    maxBytes: number,
+    label: string = "cache",
+    defaultTTL: number = DEFAULT_TTL.data,
+    persistStore: "audio" | "data" | null = null
+  ) {
     this.maxBytes = maxBytes;
     this.label = label;
     this.defaultTTL = defaultTTL;
+    this.persistStore = persistStore;
   }
 
   private isExpired(entry: CacheEntry<T>): boolean {
@@ -40,6 +58,7 @@ export class LRUCache<T> {
       if (this.isExpired(entry)) {
         this.currentBytes -= entry.size;
         this.map.delete(key);
+        if (this.persistStore) removePersistedEntry(this.persistStore, key);
       }
     }
   }
@@ -50,6 +69,7 @@ export class LRUCache<T> {
     if (this.isExpired(entry)) {
       this.currentBytes -= entry.size;
       this.map.delete(key);
+      if (this.persistStore) removePersistedEntry(this.persistStore, key);
       return undefined;
     }
     // Move to end (most recently used)
@@ -62,7 +82,6 @@ export class LRUCache<T> {
     const size = sizeBytes ?? (value instanceof Blob ? value.size : 100);
     if (size > this.maxBytes) return;
 
-    // Evict expired entries first
     this.evictExpired();
 
     if (this.map.has(key)) {
@@ -75,18 +94,21 @@ export class LRUCache<T> {
       if (oldest !== undefined) {
         this.currentBytes -= this.map.get(oldest)!.size;
         this.map.delete(oldest);
+        if (this.persistStore) removePersistedEntry(this.persistStore, oldest);
       }
     }
 
     const now = Date.now();
-    this.map.set(key, {
-      key,
-      value,
-      size,
-      createdAt: now,
-      expiresAt: now + (ttl ?? this.defaultTTL),
-    });
+    const expiresAt = now + (ttl ?? this.defaultTTL);
+    this.map.set(key, { key, value, size, createdAt: now, expiresAt });
     this.currentBytes += size;
+
+    // Persist to IndexedDB (fire-and-forget)
+    if (this.persistStore === "audio" && value instanceof Blob) {
+      persistAudioEntry(key, value, size, expiresAt);
+    } else if (this.persistStore === "data") {
+      persistDataEntry(key, value, size, expiresAt);
+    }
   }
 
   has(key: string): boolean {
@@ -95,6 +117,7 @@ export class LRUCache<T> {
     if (this.isExpired(entry)) {
       this.currentBytes -= entry.size;
       this.map.delete(key);
+      if (this.persistStore) removePersistedEntry(this.persistStore, key);
       return false;
     }
     return true;
@@ -105,12 +128,44 @@ export class LRUCache<T> {
     if (!entry) return false;
     this.currentBytes -= entry.size;
     this.map.delete(key);
+    if (this.persistStore) removePersistedEntry(this.persistStore, key);
     return true;
   }
 
   clear(): void {
     this.map.clear();
     this.currentBytes = 0;
+    if (this.persistStore) {
+      // Clear persisted store too
+      import("@/lib/idbCache").then((m) => m.clearPersistedCache()).catch(() => {});
+    }
+  }
+
+  get hydrated() {
+    return this._hydrated;
+  }
+
+  /** Hydrate in-memory cache from IndexedDB */
+  async hydrate(): Promise<void> {
+    if (this._hydrated || !this.persistStore) return;
+    try {
+      const entries = await loadPersistedEntries(this.persistStore);
+      for (const entry of entries) {
+        if (!this.map.has(entry.key) && this.currentBytes + entry.size <= this.maxBytes) {
+          this.map.set(entry.key, {
+            key: entry.key,
+            value: entry.value as T,
+            size: entry.size,
+            createdAt: entry.createdAt,
+            expiresAt: entry.expiresAt,
+          });
+          this.currentBytes += entry.size;
+        }
+      }
+    } catch {
+      // IndexedDB unavailable, continue with memory-only
+    }
+    this._hydrated = true;
   }
 
   get stats() {
@@ -121,20 +176,20 @@ export class LRUCache<T> {
       bytesUsed: this.currentBytes,
       maxBytes: this.maxBytes,
       defaultTTL: this.defaultTTL,
+      persisted: !!this.persistStore,
     };
   }
 
-  /** Update the default TTL for new entries */
   setDefaultTTL(ms: number): void {
     this.defaultTTL = Math.max(1000, ms);
   }
 }
 
-// 50MB audio cache — 30 min TTL
-export const audioCache = new LRUCache<Blob>(50 * 1024 * 1024, "Audio (TTS)", DEFAULT_TTL.audio);
+// 50MB audio cache — 30 min TTL, persisted to IndexedDB
+export const audioCache = new LRUCache<Blob>(50 * 1024 * 1024, "Audio (TTS)", DEFAULT_TTL.audio, "audio");
 
-// 5MB generic data cache — 2 min TTL
-export const dataCache = new LRUCache<unknown>(5 * 1024 * 1024, "Data (Profiles & Rooms)", DEFAULT_TTL.data);
+// 5MB generic data cache — 2 min TTL, persisted to IndexedDB
+export const dataCache = new LRUCache<unknown>(5 * 1024 * 1024, "Data (Profiles & Rooms)", DEFAULT_TTL.data, "data");
 
 // Restore user-configured TTLs from localStorage
 try {
@@ -144,6 +199,11 @@ try {
   if (savedData) dataCache.setDefaultTTL(Number(savedData));
 } catch {}
 
+/** Hydrate all caches from IndexedDB — call once at app start */
+export async function hydrateAllCaches(): Promise<void> {
+  await Promise.all([audioCache.hydrate(), dataCache.hydrate()]);
+}
+
 /** All caches registered for the stats UI */
 export const ALL_CACHES = [audioCache, dataCache] as const;
 
@@ -152,10 +212,14 @@ export function getAllCacheStats() {
   return ALL_CACHES.map((c) => c.stats);
 }
 
-/** Clear all caches */
+/** Clear all caches (memory + IndexedDB) */
 export function clearAllCaches() {
   ALL_CACHES.forEach((c) => c.clear());
+  clearPersistedCache().catch(() => {});
 }
+
+/** Get persisted disk stats */
+export { getPersistedStats } from "@/lib/idbCache";
 
 /**
  * Fetch-with-cache wrapper for any async operation.
