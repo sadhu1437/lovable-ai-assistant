@@ -33,6 +33,7 @@ const Index = () => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<ChatInputHandle>(null);
   const conversationsRef = useRef(conversations);
   conversationsRef.current = conversations;
 
