@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square, Pencil, Pin, PinOff, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
-import { sendMessage, triggerBotReply, BOT_USERNAME } from "@/lib/messaging";
+import { sendMessage, triggerBotReply, editChatMessage, pinChatMessage, BOT_USERNAME } from "@/lib/messaging";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -51,9 +51,12 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const [botThinking, setBotThinking] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
   const [deleteMsg, setDeleteMsg] = useState<ChatMessage | null>(null);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
   const { speaking, speak } = useTextToSpeech();
