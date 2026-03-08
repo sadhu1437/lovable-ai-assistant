@@ -133,17 +133,23 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     e.target.value = "";
   };
 
-  const getDisplayName = (userId: string) => {
-    const p = Object.values(profiles).find((pr) => pr.user_id === userId);
+  // Build a userId→profile lookup once (O(1) per access instead of O(n))
+  const profileByUserId = useCallback(() => {
+    const map: Record<string, UserProfile> = {};
+    for (const p of Object.values(profiles)) {
+      map[p.user_id] = p;
+    }
+    return map;
+  }, [profiles])();
+
+  const getDisplayName = useCallback((userId: string) => {
+    const p = profileByUserId[userId];
     return p?.display_name || p?.username || "User";
-  };
+  }, [profileByUserId]);
 
-  const getAvatar = (userId: string) => {
-    const p = Object.values(profiles).find((pr) => pr.user_id === userId);
-    return p?.avatar_url;
-  };
-
-  const otherUser = Object.values(profiles).find((p) => p.user_id !== currentUserId) || roomProfiles[room.id] || null;
+  const getAvatar = useCallback((userId: string) => {
+    return profileByUserId[userId]?.avatar_url;
+  }, [profileByUserId]);
   const isBot = otherUser?.username === BOT_USERNAME;
   const roomName = room.type === "group" ? room.name || "Unnamed Group" : otherUser?.display_name || "Chat";
   const otherUserId = otherUser?.user_id;
