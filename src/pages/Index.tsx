@@ -4,7 +4,7 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
-import { streamChat, generateId } from "@/lib/chat";
+import { streamChat, generateId, isImageRequest, generateImage } from "@/lib/chat";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X } from "lucide-react";
 import { toast } from "sonner";
