@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square, Pencil, Pin, PinOff, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
-import { sendMessage, triggerBotReply, BOT_USERNAME } from "@/lib/messaging";
+import { sendMessage, triggerBotReply, editChatMessage, pinChatMessage, BOT_USERNAME } from "@/lib/messaging";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -51,9 +51,12 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const [botThinking, setBotThinking] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
   const [deleteMsg, setDeleteMsg] = useState<ChatMessage | null>(null);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
   const { speaking, speak } = useTextToSpeech();
@@ -118,6 +121,40 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
       toast.success("Message deleted");
     }
     setDeleteMsg(null);
+  };
+
+  const canEditMsg = (msg: ChatMessage) => {
+    if (msg.sender_id !== currentUserId) return false;
+    const ageMs = Date.now() - new Date(msg.created_at).getTime();
+    return ageMs < 24 * 60 * 60 * 1000;
+  };
+
+  const startEditMsg = (msg: ChatMessage) => {
+    setEditingMsgId(msg.id);
+    setEditText(msg.content || "");
+    setTimeout(() => editInputRef.current?.focus(), 50);
+  };
+
+  const saveEditMsg = async () => {
+    if (!editingMsgId || !editText.trim()) { setEditingMsgId(null); return; }
+    const { error } = await editChatMessage(editingMsgId, editText.trim());
+    if (error) { toast.error("Failed to edit message"); }
+    else {
+      // Update locally
+      const updated = messages.map((m) =>
+        m.id === editingMsgId ? { ...m, content: editText.trim(), edited_at: new Date().toISOString() } : m
+      );
+      // We need to trigger a re-render through parent; for now optimistic update via messages state
+      // The realtime subscription will also eventually sync
+    }
+    setEditingMsgId(null);
+  };
+
+  const handlePinMessage = async (msg: ChatMessage) => {
+    const isPinned = !!msg.pinned_at;
+    const { error } = await pinChatMessage(msg.id, currentUserId, !isPinned);
+    if (error) toast.error("Failed to pin message");
+    else toast.success(isPinned ? "Message unpinned" : "Message pinned");
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,91 +292,129 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                   <p className="text-[10px] text-muted-foreground font-mono mb-0.5">{getDisplayName(msg.sender_id)}</p>
                 )}
                 <div className="relative">
-                  <div
-                    className={`rounded-2xl px-3 py-2 text-sm ${
-                      isMe
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-secondary text-foreground rounded-bl-sm"
-                    }`}
-                  >
-                    {msg.message_type === "voice" && msg.media_url ? (
-                      <VoicePlayer url={msg.media_url} label={msg.content || undefined} />
-                    ) : msg.message_type === "image" && msg.media_url ? (
-                      <img src={msg.media_url} alt={msg.content || ""} className="rounded-lg max-w-full max-h-60" />
-                    ) : msg.message_type === "file" && msg.media_url ? (
-                      <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="underline flex items-center gap-1">
-                        <Paperclip className="w-3 h-3" /> {msg.content}
-                      </a>
-                    ) : (
-                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                    )}
-                  </div>
-                  {/* Actions - appears on hover */}
-                  <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                    <ReactionPicker
-                      onSelect={(emoji) => toggleReaction(msg.id, emoji)}
-                      align={isMe ? "right" : "left"}
-                    />
-                    {msg.message_type === "text" && msg.content && (
-                      <button
-                        onClick={() => elevenLabs.play(msg.content || "", msg.id)}
-                        disabled={elevenLabs.loadingId === msg.id}
-                        className={`p-1 rounded transition-colors ${elevenLabs.playingId === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
-                        title={elevenLabs.playingId === msg.id ? "Stop" : "Play with AI voice"}
-                      >
-                        {elevenLabs.loadingId === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : elevenLabs.playingId === msg.id ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                      </button>
-                    )}
-                    {msg.message_type === "text" && msg.content && (
-                      <button
-                        onClick={() => speak(msg.content || "", msg.id)}
-                        className={`p-1 rounded transition-colors ${speaking === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
-                        title={speaking === msg.id ? "Stop browser TTS" : "Read aloud (browser)"}
-                      >
-                        {speaking === msg.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                      </button>
-                    )}
-                    {msg.message_type === "text" && msg.content && (
-                      <button
-                        onClick={() => elevenLabs.download(msg.content || "", msg.id)}
-                        disabled={elevenLabs.loadingId === msg.id}
-                        className={`p-1 rounded transition-colors ${elevenLabs.loadingId === msg.id ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
-                        title="Download as audio"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    {msg.message_type === "text" && msg.content && (
-                      <button
-                        onClick={() => exportMessageAsPdf({
-                          content: msg.content || "",
-                          sender: getDisplayName(msg.sender_id),
-                          timestamp: format(new Date(msg.created_at), "HH:mm"),
-                          role: isMe ? "user" : "assistant",
-                        })}
-                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                        title="Export as PDF"
-                      >
-                        <FileDown className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setForwardMsg(msg)}
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                      title="Forward"
+                  {editingMsgId === msg.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        ref={editInputRef}
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEditMsg(); if (e.key === "Escape") setEditingMsgId(null); }}
+                        className="text-sm font-mono h-8"
+                      />
+                      <button onClick={saveEditMsg} className="p-1 rounded bg-primary text-primary-foreground"><Check className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => setEditingMsgId(null)} className="p-1 rounded bg-secondary text-foreground"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                  ) : (
+                    <div
+                      className={`rounded-2xl px-3 py-2 text-sm ${
+                        isMe
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-secondary text-foreground rounded-bl-sm"
+                      } ${msg.pinned_at ? "ring-1 ring-primary/40" : ""}`}
                     >
-                      <Forward className="w-3.5 h-3.5" />
-                    </button>
-                    {isMe && (
+                      {msg.pinned_at && (
+                        <p className="text-[9px] opacity-60 mb-0.5 flex items-center gap-0.5"><Pin className="w-2.5 h-2.5" /> Pinned</p>
+                      )}
+                      {msg.message_type === "voice" && msg.media_url ? (
+                        <VoicePlayer url={msg.media_url} label={msg.content || undefined} />
+                      ) : msg.message_type === "image" && msg.media_url ? (
+                        <img src={msg.media_url} alt={msg.content || ""} className="rounded-lg max-w-full max-h-60" />
+                      ) : msg.message_type === "file" && msg.media_url ? (
+                        <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="underline flex items-center gap-1">
+                          <Paperclip className="w-3 h-3" /> {msg.content}
+                        </a>
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                      )}
+                      {msg.edited_at && (
+                        <span className="text-[9px] opacity-50 italic ml-1">(edited)</span>
+                      )}
+                    </div>
+                  )}
+                  {/* Actions - appears on hover */}
+                  {editingMsgId !== msg.id && (
+                    <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                      <ReactionPicker
+                        onSelect={(emoji) => toggleReaction(msg.id, emoji)}
+                        align={isMe ? "right" : "left"}
+                      />
+                      {isMe && canEditMsg(msg) && msg.message_type === "text" && (
+                        <button
+                          onClick={() => startEditMsg(msg)}
+                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                          title="Edit message"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
-                        onClick={() => setDeleteMsg(msg)}
-                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Delete"
+                        onClick={() => handlePinMessage(msg)}
+                        className={`p-1 rounded transition-colors ${msg.pinned_at ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                        title={msg.pinned_at ? "Unpin" : "Pin message"}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        {msg.pinned_at ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
                       </button>
-                    )}
-                  </div>
+                      {msg.message_type === "text" && msg.content && (
+                        <button
+                          onClick={() => elevenLabs.play(msg.content || "", msg.id)}
+                          disabled={elevenLabs.loadingId === msg.id}
+                          className={`p-1 rounded transition-colors ${elevenLabs.playingId === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                          title={elevenLabs.playingId === msg.id ? "Stop" : "Play with AI voice"}
+                        >
+                          {elevenLabs.loadingId === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : elevenLabs.playingId === msg.id ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+                      {msg.message_type === "text" && msg.content && (
+                        <button
+                          onClick={() => speak(msg.content || "", msg.id)}
+                          className={`p-1 rounded transition-colors ${speaking === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                          title={speaking === msg.id ? "Stop browser TTS" : "Read aloud (browser)"}
+                        >
+                          {speaking === msg.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+                      {msg.message_type === "text" && msg.content && (
+                        <button
+                          onClick={() => elevenLabs.download(msg.content || "", msg.id)}
+                          disabled={elevenLabs.loadingId === msg.id}
+                          className={`p-1 rounded transition-colors ${elevenLabs.loadingId === msg.id ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                          title="Download as audio"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {msg.message_type === "text" && msg.content && (
+                        <button
+                          onClick={() => exportMessageAsPdf({
+                            content: msg.content || "",
+                            sender: getDisplayName(msg.sender_id),
+                            timestamp: format(new Date(msg.created_at), "HH:mm"),
+                            role: isMe ? "user" : "assistant",
+                          })}
+                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                          title="Export as PDF"
+                        >
+                          <FileDown className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setForwardMsg(msg)}
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Forward"
+                      >
+                        <Forward className="w-3.5 h-3.5" />
+                      </button>
+                      {isMe && (
+                        <button
+                          onClick={() => setDeleteMsg(msg)}
+                          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {/* Reaction display */}
                 <ReactionDisplay

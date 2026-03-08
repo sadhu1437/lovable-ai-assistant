@@ -19,6 +19,8 @@ import {
   loadMessages,
   createConversation as dbCreateConversation,
   saveMessage,
+  updateMessageContent,
+  toggleBookmark,
   deleteConversation as dbDeleteConversation,
   togglePinConversation,
 } from "@/lib/db";
@@ -398,6 +400,37 @@ const Index = () => {
       } catch {
         toast.error("Failed to update pin status");
       }
+    }
+  };
+
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    // Optimistic update
+    setConversations((prev) =>
+      prev.map((c) => ({
+        ...c,
+        messages: c.messages.map((m) =>
+          m.id === messageId ? { ...m, content: newContent, editedAt: new Date() } : m
+        ),
+      }))
+    );
+    if (user) {
+      try { await updateMessageContent(messageId, newContent); }
+      catch { toast.error("Failed to edit message"); }
+    }
+  };
+
+  const handleToggleBookmark = async (messageId: string, bookmarked: boolean) => {
+    setConversations((prev) =>
+      prev.map((c) => ({
+        ...c,
+        messages: c.messages.map((m) =>
+          m.id === messageId ? { ...m, bookmarked } : m
+        ),
+      }))
+    );
+    if (user) {
+      try { await toggleBookmark(messageId, user.id, bookmarked); }
+      catch { toast.error("Failed to update bookmark"); }
     }
   };
 
@@ -795,6 +828,8 @@ const Index = () => {
                   onCanvasEdit={handleCanvasEdit}
                   isEditingImage={isEditingImage}
                   isEditingCode={isEditingCode}
+                  onEditMessage={handleEditMessage}
+                  onToggleBookmark={handleToggleBookmark}
                   elevenLabs={{
                     play: tts.play,
                     download: tts.download,

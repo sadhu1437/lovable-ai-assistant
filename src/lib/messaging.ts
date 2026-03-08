@@ -27,6 +27,9 @@ export interface ChatMessage {
   message_type: "text" | "image" | "file" | "voice";
   media_url: string | null;
   created_at: string;
+  edited_at: string | null;
+  pinned_at: string | null;
+  pinned_by: string | null;
 }
 
 export interface UserProfile {
@@ -246,4 +249,23 @@ export async function triggerBotReply(roomId: string, message: string) {
   return supabase.functions.invoke("chat-bot-reply", {
     body: { room_id: roomId, message },
   });
+}
+
+/** Edit a chat message (within 24h enforced by RLS) */
+export async function editChatMessage(messageId: string, newContent: string) {
+  return supabase
+    .from("chat_messages")
+    .update({ content: newContent, edited_at: new Date().toISOString() } as any)
+    .eq("id", messageId);
+}
+
+/** Pin/unpin a message */
+export async function pinChatMessage(messageId: string, userId: string, pin: boolean) {
+  return supabase
+    .from("chat_messages")
+    .update(pin
+      ? { pinned_at: new Date().toISOString(), pinned_by: userId } as any
+      : { pinned_at: null, pinned_by: null } as any
+    )
+    .eq("id", messageId);
 }

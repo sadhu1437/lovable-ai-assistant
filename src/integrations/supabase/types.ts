@@ -14,31 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string | null
           created_at: string
+          edited_at: string | null
           id: string
           media_url: string | null
           message_type: string
+          pinned_at: string | null
+          pinned_by: string | null
           room_id: string
           sender_id: string
         }
         Insert: {
           content?: string | null
           created_at?: string
+          edited_at?: string | null
           id?: string
           media_url?: string | null
           message_type?: string
+          pinned_at?: string | null
+          pinned_by?: string | null
           room_id: string
           sender_id: string
         }
         Update: {
           content?: string | null
           created_at?: string
+          edited_at?: string | null
           id?: string
           media_url?: string | null
           message_type?: string
+          pinned_at?: string | null
+          pinned_by?: string | null
           room_id?: string
           sender_id?: string
         }
@@ -210,6 +248,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          edited_at: string | null
           id: string
           role: string
         }
@@ -217,6 +256,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           role: string
         }
@@ -224,6 +264,7 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           role?: string
         }

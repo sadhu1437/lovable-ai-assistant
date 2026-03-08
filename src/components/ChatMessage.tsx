@@ -2,8 +2,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2, Volume2, VolumeX, FileDown, Play, Square } from "lucide-react";
-import { useState } from "react";
+import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2, Volume2, VolumeX, FileDown, Play, Square, Bookmark, BookmarkCheck, PlayCircle } from "lucide-react";
+import { useState, useRef } from "react";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { exportMessageAsPdf } from "@/lib/exportPdf";
 import type { Message } from "@/lib/chat";
@@ -15,6 +15,8 @@ interface ChatMessageProps {
   onCanvasEdit?: (editPrompt: string, existingCode: string) => void;
   isEditingImage?: boolean;
   isEditingCode?: boolean;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  onToggleBookmark?: (messageId: string, bookmarked: boolean) => void;
   elevenLabs?: {
     play: (text: string, msgId: string) => void;
     download: (text: string, msgId: string) => void;
@@ -23,18 +25,57 @@ interface ChatMessageProps {
   };
 }
 
-export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage, isEditingCode, elevenLabs }: ChatMessageProps) {
+export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage, isEditingCode, onEditMessage, onToggleBookmark, elevenLabs }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const [codeOutput, setCodeOutput] = useState<Record<string, string>>({});
   const { speaking, speak } = useTextToSpeech();
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
 
   const copyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
     setCopied(id);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const canEdit = () => {
+    if (!message.timestamp) return false;
+    const ageMs = Date.now() - message.timestamp.getTime();
+    return ageMs < 24 * 60 * 60 * 1000; // 24 hours
+  };
+
+  const startEdit = () => {
+    setEditText(message.content);
+    setIsEditing(true);
+    setTimeout(() => editInputRef.current?.focus(), 50);
+  };
+
+  const saveEdit = () => {
+    const trimmed = editText.trim();
+    if (!trimmed || trimmed === message.content) { setIsEditing(false); return; }
+    onEditMessage?.(message.id, trimmed);
+    setIsEditing(false);
+  };
+
+  const runCode = (code: string, blockId: string, language: string) => {
+    try {
+      if (language === "javascript" || language === "js" || language === "typescript" || language === "ts") {
+        const logs: string[] = [];
+        const fakeConsole = { log: (...args: any[]) => logs.push(args.map(String).join(" ")), error: (...args: any[]) => logs.push("Error: " + args.map(String).join(" ")) };
+        const fn = new Function("console", code);
+        fn(fakeConsole);
+        setCodeOutput((prev) => ({ ...prev, [blockId]: logs.join("\n") || "(no output)" }));
+      } else {
+        setCodeOutput((prev) => ({ ...prev, [blockId]: `⚠️ Only JavaScript/TypeScript execution is supported` }));
+      }
+    } catch (err: any) {
+      setCodeOutput((prev) => ({ ...prev, [blockId]: `Error: ${err.message}` }));
+    }
   };
 
   return (
@@ -68,7 +109,38 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                   </div>
                 </div>
               )}
-              <p className="text-foreground leading-7 text-[15px]">{message.content}</p>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <textarea
+                    ref={editInputRef}
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); } if (e.key === "Escape") setIsEditing(false); }}
+                    className="w-full px-3 py-2 rounded-lg bg-card border border-border text-foreground text-sm font-mono outline-none focus:border-primary/50 resize-none"
+                    rows={3}
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={saveEdit} className="px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-mono">Save</button>
+                    <button onClick={() => setIsEditing(false)} className="px-3 py-1 rounded-lg bg-secondary text-foreground text-xs font-mono">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="group/user relative">
+                  <p className="text-foreground leading-7 text-[15px]">{message.content}</p>
+                  {message.editedAt && (
+                    <span className="text-[10px] text-muted-foreground italic ml-1">(edited)</span>
+                  )}
+                  {canEdit() && onEditMessage && (
+                    <button
+                      onClick={startEdit}
+                      className="absolute -top-1 -right-8 p-1 rounded opacity-0 group-hover/user:opacity-100 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                      title="Edit message"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -99,13 +171,24 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                           <div className="relative group rounded-lg overflow-hidden border border-border my-4">
                             <div className="flex items-center justify-between bg-secondary px-4 py-2.5 text-xs font-mono text-muted-foreground">
                               <span>{match[1]}</span>
-                              <button
-                                onClick={() => copyCode(codeStr, blockId)}
-                                className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-                              >
-                                {copied === blockId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                {copied === blockId ? "Copied" : "Copy"}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                {["javascript", "js", "typescript", "ts"].includes(match[1]) && (
+                                  <button
+                                    onClick={() => runCode(codeStr, blockId, match[1])}
+                                    className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                                  >
+                                    <PlayCircle className="w-3 h-3" />
+                                    Run
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => copyCode(codeStr, blockId)}
+                                  className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                                >
+                                  {copied === blockId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                  {copied === blockId ? "Copied" : "Copy"}
+                                </button>
+                              </div>
                             </div>
                             <SyntaxHighlighter
                               style={oneDark}
@@ -121,6 +204,12 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                             >
                               {codeStr}
                             </SyntaxHighlighter>
+                            {codeOutput[blockId] && (
+                              <div className="px-4 py-2.5 bg-background border-t border-border text-xs font-mono">
+                                <p className="text-[10px] text-muted-foreground mb-1">Output:</p>
+                                <pre className="text-foreground whitespace-pre-wrap">{codeOutput[blockId]}</pre>
+                              </div>
+                            )}
                           </div>
                         );
                       }
@@ -276,8 +365,25 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                 />
               )}
 
+              {message.editedAt && (
+                <p className="text-[10px] text-muted-foreground italic mt-1">(edited)</p>
+              )}
+
               {/* Action buttons */}
               <div className="flex items-center gap-1 mt-4 pt-2">
+                {onToggleBookmark && (
+                  <button
+                    onClick={() => onToggleBookmark(message.id, !message.bookmarked)}
+                    className={`p-1.5 rounded-lg transition-all ${
+                      message.bookmarked
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    }`}
+                    title={message.bookmarked ? "Remove bookmark" : "Bookmark"}
+                  >
+                    {message.bookmarked ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+                  </button>
+                )}
                 {elevenLabs && (
                   <>
                     <button
