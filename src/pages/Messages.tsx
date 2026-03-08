@@ -172,6 +172,7 @@ export default function Messages() {
           readBy={readBy}
           allRooms={rooms}
           roomProfiles={roomProfiles}
+          onDeleteMessage={(msgId) => setMessages((prev) => prev.filter((m) => m.id !== msgId))}
         />
       ) : (
         <div className="flex-1 hidden md:flex items-center justify-center bg-background">

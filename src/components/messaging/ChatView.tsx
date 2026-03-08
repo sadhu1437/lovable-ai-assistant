@@ -315,6 +315,23 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
         currentRoomId={room.id}
         currentUserId={currentUserId}
       />
+
+      <AlertDialog open={deleteMsg !== null} onOpenChange={(open) => !open && setDeleteMsg(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete message?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The message will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMessage} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
