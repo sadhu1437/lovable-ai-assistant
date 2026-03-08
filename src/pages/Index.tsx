@@ -26,6 +26,7 @@ import { exportAsMarkdown, exportAsPdf } from "@/lib/exportChat";
 
 const Index = () => {
   const { user, signOut } = useAuth();
+  const tts = useElevenLabsTTS();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
