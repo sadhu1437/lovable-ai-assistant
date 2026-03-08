@@ -83,7 +83,9 @@ export function ChatMessage({ message }: { message: Message }) {
                     );
                   },
                 }}
-              />
+              >
+                {message.content}
+              </ReactMarkdown>
             </div>
           )}
         </div>
