@@ -258,6 +258,15 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                 </div>
               )}
 
+              {/* Code Canvas */}
+              {message.codeContent && (
+                <CodeCanvas
+                  code={message.codeContent}
+                  onEditRequest={(prompt, code) => onCanvasEdit?.(prompt, code)}
+                  isEditing={isEditingCode}
+                />
+              )}
+
               {/* Like / Dislike buttons */}
               <div className="flex items-center gap-1 mt-4 pt-2">
                 <button
