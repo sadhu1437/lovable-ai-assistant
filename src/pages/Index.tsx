@@ -4,6 +4,7 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
+import { ImageGallery } from "@/components/ImageGallery";
 import { streamChat, generateId, isImageRequest, generateImage } from "@/lib/chat";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X } from "lucide-react";
@@ -24,6 +25,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [category, setCategory] = useState("general");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showGallery, setShowGallery] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const conversationsRef = useRef(conversations);
@@ -262,9 +264,11 @@ const Index = () => {
         <ChatSidebar
           conversations={conversations}
           activeId={activeId}
-          onSelect={(id) => { setActiveId(id); setSidebarOpen(false); }}
-          onNew={() => { setActiveId(null); setSidebarOpen(false); }}
+          onSelect={(id) => { setActiveId(id); setShowGallery(false); setSidebarOpen(false); }}
+          onNew={() => { setActiveId(null); setShowGallery(false); setSidebarOpen(false); }}
           onDelete={handleDeleteConversation}
+          onGallery={() => { setShowGallery(!showGallery); setActiveId(null); setSidebarOpen(false); }}
+          showGallery={showGallery}
           user={user}
           onSignOut={signOut}
         />
@@ -275,9 +279,14 @@ const Index = () => {
         <div className="fixed inset-0 bg-background/60 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Main chat area */}
+      {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {!activeConv || activeConv.messages.length === 0 ? (
+        {showGallery ? (
+          <ImageGallery
+            conversations={conversations}
+            onBack={() => setShowGallery(false)}
+          />
+        ) : !activeConv || activeConv.messages.length === 0 ? (
           <>
             <WelcomeScreen onPrompt={sendMessage} />
             <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} />
