@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useNotificationContext } from "@/hooks/useNotificationContext";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ export default function Messages() {
   const [dialogMode, setDialogMode] = useState<"dm" | "group" | null>(null);
   const [loading, setLoading] = useState(true);
   const [botLoading, setBotLoading] = useState(false);
+  const [showCallHistory, setShowCallHistory] = useState(false);
   const profilesRef = useRef(profiles);
   profilesRef.current = profiles;
 
