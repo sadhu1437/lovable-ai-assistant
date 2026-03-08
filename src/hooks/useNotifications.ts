@@ -44,8 +44,7 @@ function showBrowserNotification(title: string, body?: string, onClick?: () => v
         icon: "/icon-192.png",
         badge: "/icon-192.png",
         tag: "nexusai-notification",
-        renotify: true,
-      });
+      } as NotificationOptions);
       if (onClick) {
         n.onclick = () => {
           window.focus();
