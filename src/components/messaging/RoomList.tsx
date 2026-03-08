@@ -105,7 +105,9 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
               >
                 <div className="relative shrink-0">
                   <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-mono text-foreground overflow-hidden">
-                    {avatar ? (
+                    {isRoomBot(room) ? (
+                      <Bot className="w-4 h-4 text-primary" />
+                    ) : avatar ? (
                       <img src={avatar} alt="" className="w-full h-full object-cover" />
                     ) : room.type === "group" ? (
                       <Users className="w-4 h-4" />
@@ -118,7 +120,7 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{name}</p>
                   <p className={`text-[10px] truncate ${isOnline ? "text-primary" : "text-muted-foreground"}`}>
-                    {room.type === "group" ? "Group" : isOnline ? "Online" : "Offline"}
+                    {isRoomBot(room) ? "AI Assistant" : room.type === "group" ? "Group" : isOnline ? "Online" : "Offline"}
                   </p>
                 </div>
               </button>
