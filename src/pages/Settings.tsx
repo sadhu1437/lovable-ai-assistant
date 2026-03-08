@@ -459,7 +459,6 @@ export default function Settings() {
                     </SelectContent>
                   </Select>
                 </div>
-                </div>
                 <Button onClick={saveProfile} disabled={saving} className="gap-2 font-mono text-xs">
                   <Save className="w-3.5 h-3.5" />
                   {saving ? "Saving…" : "Save Profile"}
