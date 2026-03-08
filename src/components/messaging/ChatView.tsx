@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
-import { sendMessage } from "@/lib/messaging";
+import { sendMessage, triggerBotReply, BOT_USERNAME } from "@/lib/messaging";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -29,6 +29,8 @@ interface ChatViewProps {
 
 export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy }: ChatViewProps) {
   const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [botThinking, setBotThinking] = useState(false);
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
