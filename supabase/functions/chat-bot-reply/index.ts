@@ -43,10 +43,10 @@ serve(async (req) => {
       botUserId = newUser.user.id;
     }
 
-    // Ensure bot profile exists
+    // Ensure bot profile exists with correct username
     const { data: existingProfile } = await adminClient
       .from("profiles")
-      .select("id")
+      .select("id, username")
       .eq("user_id", botUserId)
       .maybeSingle();
 
@@ -56,6 +56,10 @@ serve(async (req) => {
         display_name: "NexusAI Bot",
         username: "nexusai-bot",
       });
+    } else if (existingProfile.username !== "nexusai-bot") {
+      await adminClient.from("profiles")
+        .update({ username: "nexusai-bot", display_name: "NexusAI Bot" })
+        .eq("user_id", botUserId);
     }
 
     // If init mode, just return bot user id
