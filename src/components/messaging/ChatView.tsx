@@ -562,21 +562,32 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
       {/* Input */}
       <div className="relative px-4 py-3 border-t border-border bg-card">
         {/* @mention autocomplete */}
-        {showMention && (
-          <div className="absolute bottom-full left-4 right-4 mb-1 z-10">
-            <button
-              onClick={insertMention}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-card border border-border shadow-lg hover:bg-secondary transition-colors text-left"
-            >
-              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
-                <Bot className="w-3.5 h-3.5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-foreground font-mono">@nexusai</p>
-                <p className="text-[10px] text-muted-foreground">Summon NexusAI Bot into this conversation</p>
-              </div>
-              <span className="ml-auto text-[10px] text-muted-foreground font-mono">Tab ↹</span>
-            </button>
+        {showMention && filteredMentions.length > 0 && (
+          <div className="absolute bottom-full left-4 right-4 mb-1 z-10 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg">
+            {filteredMentions.map((c, i) => (
+              <button
+                key={c.userId}
+                onClick={() => insertMention(c.username)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary transition-colors text-left ${i === mentionIndex ? "bg-secondary" : ""}`}
+              >
+                <div className={`w-7 h-7 rounded-full ${c.isBot ? "bg-primary/10 border-primary/30" : "bg-secondary border-border"} border flex items-center justify-center shrink-0 overflow-hidden`}>
+                  {c.isBot ? (
+                    <Bot className="w-3.5 h-3.5 text-primary" />
+                  ) : c.avatar ? (
+                    <img src={c.avatar} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] font-mono text-foreground">{c.displayName[0].toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground font-mono truncate">{c.displayName}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">@{c.username}</p>
+                </div>
+                {c.isBot && (
+                  <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25 ml-auto shrink-0">Bot</span>
+                )}
+              </button>
+            ))}
           </div>
         )}
 
@@ -601,10 +612,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             value={text}
             onChange={(e) => handleTyping(e.target.value)}
             onKeyDown={(e) => {
-              if (showMention && (e.key === "Tab" || e.key === "Enter")) {
-                e.preventDefault();
-                insertMention();
-                return;
+              if (showMention && filteredMentions.length > 0) {
+                if (e.key === "ArrowDown") { e.preventDefault(); setMentionIndex(i => Math.min(i + 1, filteredMentions.length - 1)); return; }
+                if (e.key === "ArrowUp") { e.preventDefault(); setMentionIndex(i => Math.max(i - 1, 0)); return; }
+                if (e.key === "Tab" || e.key === "Enter") {
+                  e.preventDefault();
+                  insertMention(filteredMentions[mentionIndex].username);
+                  return;
+                }
+                if (e.key === "Escape") { setShowMention(false); return; }
               }
               if (e.key === "Escape" && replyTo) {
                 setReplyTo(null);
@@ -612,7 +628,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
               }
               if (e.key === "Enter" && !e.shiftKey) handleSend();
             }}
-            placeholder="Type a message... (@ to mention NexusAI)"
+            placeholder="Type a message... (@ to mention someone)"
             className="text-sm font-mono"
           />
           {text.trim() ? (
