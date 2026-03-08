@@ -183,6 +183,20 @@ export class LRUCache<T> {
   setDefaultTTL(ms: number): void {
     this.defaultTTL = Math.max(1000, ms);
   }
+
+  /** Resize the cache max bytes, evicting if needed */
+  setMaxBytes(bytes: number): void {
+    this.maxBytes = bytes;
+    // Evict until we fit
+    while (this.currentBytes > this.maxBytes && this.map.size > 0) {
+      const oldest = this.map.keys().next().value;
+      if (oldest !== undefined) {
+        this.currentBytes -= this.map.get(oldest)!.size;
+        this.map.delete(oldest);
+        if (this.persistStore) removePersistedEntry(this.persistStore, oldest);
+      }
+    }
+  }
 }
 
 // 50MB audio cache — 30 min TTL, persisted to IndexedDB

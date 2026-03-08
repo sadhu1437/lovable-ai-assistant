@@ -43,6 +43,21 @@ const TTL_OPTIONS = [
   { label: "1 hr", ms: 60 * 60 * 1000 },
 ];
 
+const AUDIO_SIZE_OPTIONS = [
+  { label: "10 MB", bytes: 10 * 1024 * 1024 },
+  { label: "25 MB", bytes: 25 * 1024 * 1024 },
+  { label: "50 MB", bytes: 50 * 1024 * 1024 },
+  { label: "100 MB", bytes: 100 * 1024 * 1024 },
+  { label: "200 MB", bytes: 200 * 1024 * 1024 },
+];
+
+const DATA_SIZE_OPTIONS = [
+  { label: "1 MB", bytes: 1 * 1024 * 1024 },
+  { label: "5 MB", bytes: 5 * 1024 * 1024 },
+  { label: "10 MB", bytes: 10 * 1024 * 1024 },
+  { label: "25 MB", bytes: 25 * 1024 * 1024 },
+];
+
 function formatTTL(ms: number): string {
   if (ms >= 3600000) return `${Math.round(ms / 3600000)} hr`;
   if (ms >= 60000) return `${Math.round(ms / 60000)} min`;
