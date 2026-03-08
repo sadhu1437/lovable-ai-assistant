@@ -99,19 +99,16 @@ export default function Messages() {
       if (cancelled) return;
       setMessages(msgs);
 
-      // Batch fetch missing profiles
+      // Cached batch fetch for missing profiles
       const existingUserIds = new Set(Object.values(profilesRef.current).map((p) => p.user_id));
       const missingSenderIds = [...new Set(msgs.map((m) => m.sender_id))].filter((id) => !existingUserIds.has(id));
 
       if (missingSenderIds.length > 0) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("id, user_id, username, display_name, avatar_url")
-          .in("user_id", missingSenderIds);
-        if (data && !cancelled) {
+        const fetched = await fetchProfilesByUserIds(missingSenderIds);
+        if (!cancelled && fetched.length > 0) {
           setProfiles((prev) => {
             const next = { ...prev };
-            for (const p of data) next[p.id] = p as UserProfile;
+            for (const p of fetched) next[p.id] = p;
             return next;
           });
         }
@@ -138,15 +135,11 @@ export default function Messages() {
             return [...prev, newMsg];
           });
 
-          // Fetch profile if missing — use ref for current state
+          // Fetch profile if missing — cached
           const existingUserIds = new Set(Object.values(profilesRef.current).map((p) => p.user_id));
           if (!existingUserIds.has(newMsg.sender_id)) {
-            const { data } = await supabase
-              .from("profiles")
-              .select("id, user_id, username, display_name, avatar_url")
-              .eq("user_id", newMsg.sender_id)
-              .maybeSingle();
-            if (data) setProfiles((prev) => ({ ...prev, [data.id]: data as UserProfile }));
+            const profile = await fetchProfileByUserId(newMsg.sender_id);
+            if (profile) setProfiles((prev) => ({ ...prev, [profile.id]: profile }));
           }
         }
       )
