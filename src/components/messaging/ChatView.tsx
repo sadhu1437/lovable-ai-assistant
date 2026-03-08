@@ -30,10 +30,11 @@ interface ChatViewProps {
   roomProfiles?: Record<string, UserProfile>;
 }
 
-export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy }: ChatViewProps) {
+export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {} }: ChatViewProps) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [botThinking, setBotThinking] = useState(false);
+  const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
