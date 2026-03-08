@@ -1,7 +1,8 @@
-import { Plus, MessageSquare, Trash2, LogOut, LogIn, Image as ImageIcon } from "lucide-react";
+import { Plus, MessageSquare, Trash2, LogOut, LogIn, Image as ImageIcon, Sun, Moon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Conversation } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
+import { useTheme } from "@/hooks/useTheme";
 
 interface ChatSidebarProps {
   conversations: Conversation[];
@@ -17,6 +18,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, onGallery, showGallery, user, onSignOut }: ChatSidebarProps) {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="w-64 h-full bg-card border-r border-border flex flex-col">
@@ -77,8 +79,15 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
         )}
       </div>
 
-      {/* User section */}
-      <div className="p-3 border-t border-border">
+      {/* Theme toggle + User section */}
+      <div className="p-3 border-t border-border space-y-2">
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-sm text-foreground transition-all"
+        >
+          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          <span className="font-mono text-xs">{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+        </button>
         {user ? (
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs font-mono text-secondary-foreground">
