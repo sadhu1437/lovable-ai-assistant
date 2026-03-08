@@ -13,6 +13,13 @@ import { ReadReceiptIcon } from "./ReadReceiptIcon";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { VoicePlayer } from "./VoicePlayer";
 import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useReactions } from "@/hooks/useReactions";
 import { ForwardMessageDialog } from "./ForwardMessageDialog";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
