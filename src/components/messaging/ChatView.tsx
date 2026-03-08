@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2 } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -15,6 +15,8 @@ import { VoicePlayer } from "./VoicePlayer";
 import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
 import { useReactions } from "@/hooks/useReactions";
 import { ForwardMessageDialog } from "./ForwardMessageDialog";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { exportMessageAsPdf, exportMessagesToPdf } from "@/lib/exportPdf";
 import {
   AlertDialog,
   AlertDialogAction,
