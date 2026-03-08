@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,32 +30,62 @@ export default function Messages() {
   const [roomProfiles, setRoomProfiles] = useState<Record<string, UserProfile>>({});
   const [dialogMode, setDialogMode] = useState<"dm" | "group" | null>(null);
   const [loading, setLoading] = useState(true);
+  const profilesRef = useRef(profiles);
+  profilesRef.current = profiles;
 
   const { onlineUsers, typingUsers, setTyping } = usePresence(user?.id, activeRoomId);
   const { readBy } = useReadReceipts(activeRoomId, user?.id, messages);
 
-  // Load rooms
+  // Load rooms — batch profile fetching instead of N+1
   const loadRooms = useCallback(async () => {
+    if (!user) return;
     const data = await fetchUserRooms();
     setRooms(data);
+
+    const dmRooms = data.filter((r) => r.type === "dm");
+    if (dmRooms.length === 0) { setLoading(false); return; }
+
+    // Batch: get all members for all DM rooms at once
+    const { data: allMembers } = await supabase
+      .from("chat_room_members")
+      .select("room_id, user_id")
+      .in("room_id", dmRooms.map((r) => r.id));
+
+    if (!allMembers) { setLoading(false); return; }
+
+    const otherUserIds = new Set<string>();
+    const roomToOtherUser: Record<string, string> = {};
+    for (const member of allMembers) {
+      if (member.user_id !== user.id) {
+        otherUserIds.add(member.user_id);
+        roomToOtherUser[member.room_id] = member.user_id;
+      }
+    }
+
+    if (otherUserIds.size === 0) { setLoading(false); return; }
+
+    // Single batch query for all profiles
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, user_id, username, display_name, avatar_url")
+      .in("user_id", Array.from(otherUserIds));
+
     const profileMap: Record<string, UserProfile> = {};
-    for (const room of data) {
-      if (room.type === "dm") {
-        const members = await fetchRoomMembers(room.id);
-        const otherMember = members.find((m) => m.user_id !== user?.id);
-        if (otherMember) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id, user_id, username, display_name, avatar_url")
-            .eq("user_id", otherMember.user_id)
-            .maybeSingle();
-          if (profile) profileMap[room.id] = profile as UserProfile;
+    if (profilesData) {
+      const profileByUserId: Record<string, UserProfile> = {};
+      for (const p of profilesData) {
+        profileByUserId[p.user_id] = p as UserProfile;
+      }
+      for (const [roomId, userId] of Object.entries(roomToOtherUser)) {
+        if (profileByUserId[userId]) {
+          profileMap[roomId] = profileByUserId[userId];
         }
       }
     }
+
     setRoomProfiles(profileMap);
     setLoading(false);
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
@@ -64,28 +94,38 @@ export default function Messages() {
 
   // Load messages for active room
   useEffect(() => {
-    if (!activeRoomId) return;
+    if (!activeRoomId || !user) return;
+    let cancelled = false;
+
     const loadMessages = async () => {
       const msgs = await fetchRoomMessages(activeRoomId);
+      if (cancelled) return;
       setMessages(msgs);
-      const senderIds = [...new Set(msgs.map((m) => m.sender_id))];
-      const profileMap: Record<string, UserProfile> = { ...profiles };
-      for (const sid of senderIds) {
-        if (!Object.values(profileMap).find((p) => p.user_id === sid)) {
-          const { data } = await supabase
-            .from("profiles")
-            .select("id, user_id, username, display_name, avatar_url")
-            .eq("user_id", sid)
-            .maybeSingle();
-          if (data) profileMap[data.id] = data as UserProfile;
+
+      // Batch fetch missing profiles
+      const existingUserIds = new Set(Object.values(profilesRef.current).map((p) => p.user_id));
+      const missingSenderIds = [...new Set(msgs.map((m) => m.sender_id))].filter((id) => !existingUserIds.has(id));
+
+      if (missingSenderIds.length > 0) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, user_id, username, display_name, avatar_url")
+          .in("user_id", missingSenderIds);
+        if (data && !cancelled) {
+          setProfiles((prev) => {
+            const next = { ...prev };
+            for (const p of data) next[p.id] = p as UserProfile;
+            return next;
+          });
         }
       }
-      setProfiles(profileMap);
     };
     loadMessages();
-  }, [activeRoomId]);
 
-  // Realtime subscription for messages
+    return () => { cancelled = true; };
+  }, [activeRoomId, user]);
+
+  // Realtime subscription for messages — uses ref to avoid stale closure
   useEffect(() => {
     if (!activeRoomId) return;
     const channel = supabase
@@ -95,8 +135,15 @@ export default function Messages() {
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `room_id=eq.${activeRoomId}` },
         async (payload) => {
           const newMsg = payload.new as ChatMessage;
-          setMessages((prev) => [...prev, newMsg]);
-          if (!Object.values(profiles).find((p) => p.user_id === newMsg.sender_id)) {
+          setMessages((prev) => {
+            // Prevent duplicates
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+
+          // Fetch profile if missing — use ref for current state
+          const existingUserIds = new Set(Object.values(profilesRef.current).map((p) => p.user_id));
+          if (!existingUserIds.has(newMsg.sender_id)) {
             const { data } = await supabase
               .from("profiles")
               .select("id, user_id, username, display_name, avatar_url")
@@ -104,6 +151,14 @@ export default function Messages() {
               .maybeSingle();
             if (data) setProfiles((prev) => ({ ...prev, [data.id]: data as UserProfile }));
           }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "chat_messages", filter: `room_id=eq.${activeRoomId}` },
+        (payload) => {
+          const deletedId = (payload.old as any)?.id;
+          if (deletedId) setMessages((prev) => prev.filter((m) => m.id !== deletedId));
         }
       )
       .subscribe();

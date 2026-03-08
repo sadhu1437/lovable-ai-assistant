@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Reaction {
@@ -17,6 +17,7 @@ interface GroupedReaction {
 
 export function useReactions(roomId: string | null, currentUserId: string | undefined) {
   const [reactions, setReactions] = useState<Record<string, GroupedReaction[]>>({});
+  const loadedMsgIdsRef = useRef<string>("");
 
   const groupReactions = useCallback(
     (raw: Reaction[]): Record<string, GroupedReaction[]> => {
@@ -41,10 +42,14 @@ export function useReactions(roomId: string | null, currentUserId: string | unde
     [currentUserId]
   );
 
-  // Load all reactions for messages in the active room
+  // Load reactions — deduplicated by message IDs
   const loadReactions = useCallback(
     async (messageIds: string[]) => {
       if (!messageIds.length) return;
+      const key = messageIds.join(",");
+      if (key === loadedMsgIdsRef.current) return;
+      loadedMsgIdsRef.current = key;
+
       const { data } = await supabase
         .from("message_reactions")
         .select("id, message_id, user_id, emoji")
