@@ -26,6 +26,8 @@ interface ChatViewProps {
   typingUsers: Set<string>;
   setTyping: (isTyping: boolean) => void;
   readBy: Record<string, string[]>;
+  allRooms?: ChatRoom[];
+  roomProfiles?: Record<string, UserProfile>;
 }
 
 export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy }: ChatViewProps) {
