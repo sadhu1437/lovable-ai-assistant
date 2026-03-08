@@ -110,6 +110,13 @@
     color: hsl(var(--foreground));
   }
 
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) hsl(var(--background));
+  }
+
+  /* Chrome/Safari/Edge */
   ::-webkit-scrollbar {
     width: 6px;
   }
