@@ -336,7 +336,8 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   }, [messages]);
 
   const otherUser = roomProfiles[room.id] || Object.values(profileByUserId).find((p) => p.user_id !== currentUserId && p.username !== BOT_USERNAME) || Object.values(profileByUserId).find((p) => p.user_id !== currentUserId) || null;
-  const isBot = roomProfiles[room.id]?.username === BOT_USERNAME || (room.type === "dm" && Object.values(profileByUserId).filter(p => p.user_id !== currentUserId).every(p => p.username === BOT_USERNAME));
+  const otherParticipants = Object.values(profileByUserId).filter(p => p.user_id !== currentUserId);
+  const isBot = roomProfiles[room.id]?.username === BOT_USERNAME || (room.type === "dm" && otherParticipants.length > 0 && otherParticipants.every(p => p.username === BOT_USERNAME));
   const roomName = room.type === "group" ? room.name || "Unnamed Group" : otherUser?.display_name || "Chat";
   const otherUserId = otherUser?.user_id;
   const isOtherOnline = isBot ? true : (otherUserId ? onlineUsers.has(otherUserId) : false);
