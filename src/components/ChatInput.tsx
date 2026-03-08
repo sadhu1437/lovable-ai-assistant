@@ -27,6 +27,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => textareaRef.current?.focus(),
+  }));
   const recognitionRef = useRef<any>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -336,4 +340,4 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
       </div>
     </div>
   );
-}
+});
