@@ -28,7 +28,9 @@ const Index = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [category, setCategory] = useState("general");
-  const [model, setModel] = useState("google/gemini-3-flash-preview");
+  const [model, setModel] = useState(() =>
+    localStorage.getItem("nexus-default-model") || "google/gemini-3-flash-preview"
+  );
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showGallery, setShowGallery] = useState(false);
   const [isEditingImage, setIsEditingImage] = useState(false);

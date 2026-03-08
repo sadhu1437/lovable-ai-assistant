@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, Trash2, LogOut, LogIn, Image as ImageIcon, Sun, Moon, Pin, PinOff } from "lucide-react";
+import { Plus, MessageSquare, Trash2, LogOut, LogIn, Image as ImageIcon, Sun, Moon, Pin, PinOff, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Conversation } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
@@ -99,6 +99,15 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
           {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           <span className="font-mono text-xs">{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
         </button>
+        {user && (
+          <button
+            onClick={() => navigate("/settings")}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-sm text-foreground transition-all"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="font-mono text-xs">Settings</span>
+          </button>
+        )}
         {user ? (
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs font-mono text-secondary-foreground">
