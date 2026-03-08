@@ -3,14 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+    <title>NexusAI — Ultra-fast AI Assistant</title>
+    <meta name="description" content="Ultra-fast AI assistant for coding, DSA, content creation and more." />
+    <meta name="author" content="NexusAI" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="Lovable App" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:title" content="NexusAI — Ultra-fast AI Assistant" />
+    <meta property="og:description" content="Ultra-fast AI assistant for coding, DSA, content creation and more." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
@@ -24,10 +22,30 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="NexusAI" />
+    <style>
+      /* Inline splash — visible before any JS loads */
+      #splash{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;gap:16px;font-family:ui-monospace,SFMono-Regular,monospace}
+      #splash .logo{width:56px;height:56px;border-radius:14px;background:#00ff55;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(0,255,85,.35);animation:pulse-glow 2s ease-in-out infinite}
+      #splash .title{font-size:22px;font-weight:700;color:#fafafa;letter-spacing:-.5px}
+      #splash .title span{color:#00ff55}
+      #splash .bar{width:120px;height:3px;border-radius:4px;background:#1a1a1a;overflow:hidden;position:relative}
+      #splash .bar::after{content:'';position:absolute;inset:0;background:#00ff55;animation:slide 1.2s ease-in-out infinite;transform-origin:left;border-radius:4px}
+      @keyframes slide{0%{transform:translateX(-100%)}50%{transform:translateX(0)}100%{transform:translateX(100%)}}
+      @keyframes pulse-glow{0%,100%{box-shadow:0 0 20px rgba(0,255,85,.25)}50%{box-shadow:0 0 40px rgba(0,255,85,.5)}}
+      #splash .bolt{width:24px;height:24px;fill:none;stroke:#0a0a0a;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="splash">
+        <div class="logo">
+          <svg class="bolt" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="title">Nexus<span>AI</span></div>
+        <div class="bar"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
