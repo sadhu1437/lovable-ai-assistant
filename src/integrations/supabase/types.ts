@@ -64,36 +64,71 @@ export type Database = {
           },
         ]
       }
+      call_participants: {
+        Row: {
+          call_id: string
+          id: string
+          joined_at: string | null
+          left_at: string | null
+          user_id: string
+        }
+        Insert: {
+          call_id: string
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          user_id: string
+        }
+        Update: {
+          call_id?: string
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_participants_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calls: {
         Row: {
           call_type: string
-          callee_id: string
+          callee_id: string | null
           caller_id: string
           created_at: string
           ended_at: string | null
           id: string
+          is_group_call: boolean
           room_id: string
           started_at: string | null
           status: string
         }
         Insert: {
           call_type?: string
-          callee_id: string
+          callee_id?: string | null
           caller_id: string
           created_at?: string
           ended_at?: string | null
           id?: string
+          is_group_call?: boolean
           room_id: string
           started_at?: string | null
           status?: string
         }
         Update: {
           call_type?: string
-          callee_id?: string
+          callee_id?: string | null
           caller_id?: string
           created_at?: string
           ended_at?: string | null
           id?: string
+          is_group_call?: boolean
           room_id?: string
           started_at?: string | null
           status?: string
