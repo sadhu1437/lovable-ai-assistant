@@ -106,8 +106,8 @@
   }
 
   ::selection {
-    background: hsl(120 100% 55% / 0.25);
-    color: hsl(0 0% 100%);
+    background: hsl(var(--primary) / 0.25);
+    color: hsl(var(--foreground));
   }
 
   ::-webkit-scrollbar {
