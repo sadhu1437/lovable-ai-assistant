@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Conversation } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
 import { useTheme } from "@/hooks/useTheme";
+import { prefetchRoute } from "@/lib/routePrefetch";
 
 interface ChatSidebarProps {
   conversations: Conversation[];
@@ -108,6 +109,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
         {user && (
           <button
             onClick={() => navigate("/messages")}
+            onMouseEnter={() => prefetchRoute("/messages")}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-sm text-foreground transition-all"
           >
             <MessageCircle className="w-4 h-4" />
@@ -117,6 +119,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
         {user && (
           <button
             onClick={() => navigate("/settings")}
+            onMouseEnter={() => prefetchRoute("/settings")}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-sm text-foreground transition-all"
           >
             <Settings className="w-4 h-4" />
@@ -138,6 +141,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
         ) : (
           <button
             onClick={() => navigate("/auth")}
+            onMouseEnter={() => prefetchRoute("/auth")}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary hover:bg-muted text-sm text-foreground transition-all"
           >
             <LogIn className="w-4 h-4" />
