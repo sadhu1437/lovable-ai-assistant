@@ -45,6 +45,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const [sending, setSending] = useState(false);
   const [botThinking, setBotThinking] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
+  const [deleteMsg, setDeleteMsg] = useState<ChatMessage | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
