@@ -2,14 +2,22 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download } from "lucide-react";
+import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2 } from "lucide-react";
 import { useState } from "react";
 import type { Message } from "@/lib/chat";
 
-export function ChatMessage({ message }: { message: Message }) {
+interface ChatMessageProps {
+  message: Message;
+  onEditImage?: (imageUrl: string, prompt: string) => void;
+  isEditingImage?: boolean;
+}
+
+export function ChatMessage({ message, onEditImage, isEditingImage }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editPrompt, setEditPrompt] = useState("");
 
   const copyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
@@ -134,22 +142,71 @@ export function ChatMessage({ message }: { message: Message }) {
 
               {/* Generated Images */}
               {message.images && message.images.length > 0 && (
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 space-y-4">
                   {message.images.map((imgSrc, idx) => (
-                    <div key={idx} className="relative group rounded-xl overflow-hidden border border-border inline-block">
-                      <img
-                        src={imgSrc}
-                        alt={`Generated image ${idx + 1}`}
-                        className="max-w-full max-h-[512px] rounded-xl object-contain"
-                      />
-                      <a
-                        href={imgSrc}
-                        download={`nexusai-image-${idx + 1}.png`}
-                        className="absolute top-2 right-2 p-2 rounded-lg bg-background/80 backdrop-blur-sm text-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
-                        title="Download image"
-                      >
-                        <Download className="w-4 h-4" />
-                      </a>
+                    <div key={idx} className="space-y-2">
+                      <div className="relative group rounded-xl overflow-hidden border border-border inline-block">
+                        <img
+                          src={imgSrc}
+                          alt={`Generated image ${idx + 1}`}
+                          className="max-w-full max-h-[512px] rounded-xl object-contain"
+                        />
+                        <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              setEditingIdx(editingIdx === idx ? null : idx);
+                              setEditPrompt("");
+                            }}
+                            className="p-2 rounded-lg bg-background/80 backdrop-blur-sm text-foreground hover:bg-background transition-colors"
+                            title="Edit image"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <a
+                            href={imgSrc}
+                            download={`nexusai-image-${idx + 1}.png`}
+                            className="p-2 rounded-lg bg-background/80 backdrop-blur-sm text-foreground hover:bg-background transition-colors"
+                            title="Download image"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Edit prompt input */}
+                      {editingIdx === idx && (
+                        <div className="flex gap-2 max-w-md animate-fade-in">
+                          <input
+                            type="text"
+                            value={editPrompt}
+                            onChange={(e) => setEditPrompt(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && editPrompt.trim() && onEditImage) {
+                                onEditImage(imgSrc, editPrompt.trim());
+                                setEditingIdx(null);
+                                setEditPrompt("");
+                              }
+                            }}
+                            placeholder="Describe how to edit this image..."
+                            className="flex-1 px-3 py-2 rounded-lg bg-card border border-border text-foreground placeholder:text-muted-foreground text-sm outline-none focus:border-primary/50 transition-all"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => {
+                              if (editPrompt.trim() && onEditImage) {
+                                onEditImage(imgSrc, editPrompt.trim());
+                                setEditingIdx(null);
+                                setEditPrompt("");
+                              }
+                            }}
+                            disabled={!editPrompt.trim() || isEditingImage}
+                            className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 hover:glow-primary transition-all flex items-center gap-1.5"
+                          >
+                            {isEditingImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Pencil className="w-3.5 h-3.5" />}
+                            Edit
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
