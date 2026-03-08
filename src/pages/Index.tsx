@@ -711,6 +711,7 @@ const Index = () => {
           onSelect={(id) => { setActiveId(id); setShowGallery(false); setSidebarOpen(false); }}
           onNew={() => { setActiveId(null); setShowGallery(false); setSidebarOpen(false); }}
           onDelete={handleDeleteConversation}
+          onPin={handlePinConversation}
           onGallery={() => { setShowGallery(!showGallery); setActiveId(null); setSidebarOpen(false); }}
           showGallery={showGallery}
           user={user}
