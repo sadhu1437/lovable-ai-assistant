@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import { TypingBubble } from "./TypingBubble";
 import { OnlineIndicator } from "./OnlineIndicator";
 import { ReadReceiptIcon } from "./ReadReceiptIcon";
+import { VoiceRecorder } from "./VoiceRecorder";
+import { VoicePlayer } from "./VoicePlayer";
 
 interface ChatViewProps {
   room: ChatRoom;
@@ -169,7 +171,9 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                       : "bg-secondary text-foreground rounded-bl-sm"
                   }`}
                 >
-                  {msg.message_type === "image" && msg.media_url ? (
+                  {msg.message_type === "voice" && msg.media_url ? (
+                    <VoicePlayer url={msg.media_url} label={msg.content || undefined} />
+                  ) : msg.message_type === "image" && msg.media_url ? (
                     <img src={msg.media_url} alt={msg.content || ""} className="rounded-lg max-w-full max-h-60" />
                   ) : msg.message_type === "file" && msg.media_url ? (
                     <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="underline flex items-center gap-1">
@@ -204,9 +208,13 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             placeholder="Type a message..."
             className="text-sm font-mono"
           />
-          <Button size="icon" onClick={handleSend} disabled={!text.trim() || sending}>
-            <Send className="w-4 h-4" />
-          </Button>
+          {text.trim() ? (
+            <Button size="icon" onClick={handleSend} disabled={sending}>
+              <Send className="w-4 h-4" />
+            </Button>
+          ) : (
+            <VoiceRecorder roomId={room.id} senderId={currentUserId} />
+          )}
         </div>
       </div>
     </div>
