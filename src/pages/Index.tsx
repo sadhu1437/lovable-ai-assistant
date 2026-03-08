@@ -179,7 +179,62 @@ const Index = () => {
       return;
     }
 
-    // Check if this is a video generation request
+    // Check if this is a code/website generation request
+    if (isCodeRequest(content)) {
+      let codeAccumulator = "";
+      await streamCodeGenerate({
+        prompt: content,
+        onDelta: (delta) => {
+          codeAccumulator += delta;
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== convId) return c;
+              const existing = c.messages.find((m) => m.id === localAssistantId);
+              if (existing) {
+                return {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === localAssistantId ? { ...m, content: "Here's your website! ✨", codeContent: codeAccumulator } : m
+                  ),
+                };
+              }
+              return {
+                ...c,
+                messages: [
+                  ...c.messages,
+                  { id: localAssistantId, role: "assistant" as const, content: "Here's your website! ✨", codeContent: codeAccumulator, timestamp: new Date() },
+                ],
+              };
+            })
+          );
+        },
+        onDone: async () => {
+          setIsLoading(false);
+          if (user) {
+            const finalConv = conversationsRef.current.find((c) => c.id === convId);
+            const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
+            if (assistantMsg) {
+              try {
+                const dbId = await saveMessage(convId!, "assistant", assistantMsg.content);
+                setConversations((prev) =>
+                  prev.map((c) =>
+                    c.id === convId
+                      ? { ...c, messages: c.messages.map((m) => m.id === localAssistantId ? { ...m, id: dbId } : m) }
+                      : c
+                  )
+                );
+              } catch { /* non-critical */ }
+            }
+          }
+        },
+        onError: (err) => {
+          setIsLoading(false);
+          toast.error(err);
+        },
+      });
+      return;
+    }
+
     if (isVideoRequest(content)) {
       await generateVideo({
         prompt: content,
