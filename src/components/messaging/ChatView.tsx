@@ -165,11 +165,11 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   }, []);
 
   const isBotRoom = useCallback(() => {
-    // Only true for DM rooms where the other user IS the bot
+    // Bot auto-replies only in pure 1:1 DM with the bot (exactly one other participant)
     if (room.type !== "dm") return false;
-    const roomProfile = roomProfiles[room.id];
-    return roomProfile?.username === BOT_USERNAME;
-  }, [roomProfiles, room.id, room.type]);
+    const otherParticipants = Object.values(profileByUserId).filter((p) => p.user_id !== currentUserId);
+    return otherParticipants.length === 1 && otherParticipants[0]?.username === BOT_USERNAME;
+  }, [room.type, profileByUserId, currentUserId]);
 
   const handleReply = useCallback((msg: ChatMessage) => {
     setReplyTo(msg);
