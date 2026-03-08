@@ -5,7 +5,8 @@ import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
-import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo, analyzeFile, readFileAsDataUrl, readFileAsText, guessFileType } from "@/lib/chat";
+import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo, analyzeFile } from "@/lib/chat";
+import { extractFileForAnalysis } from "@/lib/fileExtraction";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -363,33 +364,20 @@ const Index = () => {
       setActiveId(convId);
     }
 
-    const normalizedName = file.name.toLowerCase();
-    const fileType = file.type || guessFileType(normalizedName);
-    const isImage = fileType.startsWith("image/");
-    const isBinary =
-      fileType.startsWith("application/pdf") ||
-      fileType.startsWith("application/vnd") ||
-      fileType.startsWith("application/msword") ||
-      normalizedName.endsWith(".pdf") ||
-      normalizedName.endsWith(".doc") ||
-      normalizedName.endsWith(".docx") ||
-      normalizedName.endsWith(".xls") ||
-      normalizedName.endsWith(".xlsx") ||
-      normalizedName.endsWith(".ppt") ||
-      normalizedName.endsWith(".pptx");
     let fileContent: string;
     let dataUrl: string | undefined;
+    let fileType: string;
+    let isImage = false;
 
     try {
-      if (isImage || isBinary) {
-        fileContent = await readFileAsDataUrl(file);
-        dataUrl = isImage ? fileContent : undefined;
-      } else {
-        fileContent = await readFileAsText(file);
-      }
+      const extracted = await extractFileForAnalysis(file);
+      fileContent = extracted.content;
+      dataUrl = extracted.dataUrl;
+      fileType = extracted.fileType;
+      isImage = extracted.isImage;
     } catch (err) {
       console.error("File read error:", err);
-      toast.error("Failed to read file. Try a different format.");
+      toast.error(err instanceof Error ? err.message : "Failed to read file. Try another format.");
       return;
     }
 
