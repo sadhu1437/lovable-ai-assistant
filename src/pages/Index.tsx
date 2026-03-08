@@ -398,7 +398,73 @@ const Index = () => {
     });
   };
 
-  const handleFileUpload = async (file: File, prompt?: string) => {
+  const [isEditingCode, setIsEditingCode] = useState(false);
+
+  const handleCanvasEdit = async (editPrompt: string, existingCode: string) => {
+    if (!activeId) return;
+    const convId = activeId;
+
+    const userMsg: Message = {
+      id: generateId(),
+      role: "user",
+      content: `✏️ Edit code: ${editPrompt}`,
+      timestamp: new Date(),
+    };
+    setConversations((prev) =>
+      prev.map((c) => c.id === convId ? { ...c, messages: [...c.messages, userMsg] } : c)
+    );
+
+    setIsEditingCode(true);
+    const localAssistantId = generateId();
+    let codeAccumulator = "";
+
+    await streamCodeGenerate({
+      prompt: editPrompt,
+      existingCode,
+      onDelta: (delta) => {
+        codeAccumulator += delta;
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== convId) return c;
+            const existing = c.messages.find((m) => m.id === localAssistantId);
+            if (existing) {
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === localAssistantId ? { ...m, codeContent: codeAccumulator } : m
+                ),
+              };
+            }
+            return {
+              ...c,
+              messages: [
+                ...c.messages,
+                { id: localAssistantId, role: "assistant" as const, content: "Updated your code! ✨", codeContent: codeAccumulator, timestamp: new Date() },
+              ],
+            };
+          })
+        );
+      },
+      onDone: async () => {
+        setIsEditingCode(false);
+        if (user) {
+          const finalConv = conversationsRef.current.find((c) => c.id === convId);
+          const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
+          if (assistantMsg) {
+            try {
+              await saveMessage(convId, "user", userMsg.content);
+              await saveMessage(convId, "assistant", assistantMsg.content);
+            } catch { /* non-critical */ }
+          }
+        }
+      },
+      onError: (err) => {
+        setIsEditingCode(false);
+        toast.error(err);
+      },
+    });
+  };
+
     let convId = activeId;
     const isNew = !convId;
     const title = prompt?.slice(0, 40) || `📎 ${file.name}`;
