@@ -704,7 +704,18 @@ const Index = () => {
         <div className="fixed inset-0 bg-background/60 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Main area */}
+      {/* Command Palette */}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        conversations={conversations}
+        onSelectConversation={(id) => { setActiveId(id); setShowGallery(false); setSidebarOpen(false); }}
+        onNewChat={() => { setActiveId(null); setShowGallery(false); setSidebarOpen(false); }}
+        onOpenGallery={() => { setShowGallery(true); setActiveId(null); setSidebarOpen(false); }}
+        onSignOut={signOut}
+        onFocusInput={() => chatInputRef.current?.focus()}
+      />
+
       <div className="flex-1 flex flex-col min-w-0">
         {showGallery ? (
           <ImageGallery
