@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type CallStatus = "idle" | "calling" | "ringing" | "active" | "ended";
 export type CallType = "audio" | "video";
+export type ConnectionQuality = "excellent" | "good" | "fair" | "poor" | "unknown";
 
 interface UseWebRTCOptions {
   currentUserId: string;
@@ -27,6 +28,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   const [callDuration, setCallDuration] = useState(0);
   const [isGroupCall, setIsGroupCall] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
+  const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>("unknown");
 
   // For 1:1 calls
   const pcRef = useRef<RTCPeerConnection | null>(null);
