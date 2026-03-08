@@ -91,10 +91,48 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typingUsers.size]);
 
+  // Build mention candidates from room members
+  const mentionCandidates = useMemo(() => {
+    const candidates: { userId: string; username: string; displayName: string; avatar: string | null; isBot: boolean }[] = [];
+    for (const p of Object.values(profileByUserId)) {
+      if (p.user_id === currentUserId) continue;
+      const isBot = p.username === BOT_USERNAME;
+      candidates.push({
+        userId: p.user_id,
+        username: p.username || p.display_name?.toLowerCase().replace(/\s+/g, "_") || "user",
+        displayName: p.display_name || p.username || "User",
+        avatar: p.avatar_url,
+        isBot,
+      });
+    }
+    // Sort: bot first, then alphabetical
+    candidates.sort((a, b) => {
+      if (a.isBot && !b.isBot) return -1;
+      if (!a.isBot && b.isBot) return 1;
+      return a.displayName.localeCompare(b.displayName);
+    });
+    return candidates;
+  }, [profileByUserId, currentUserId]);
+
+  const filteredMentions = useMemo(() => {
+    if (!mentionQuery) return mentionCandidates;
+    const q = mentionQuery.toLowerCase();
+    return mentionCandidates.filter(
+      c => c.username.toLowerCase().includes(q) || c.displayName.toLowerCase().includes(q)
+    );
+  }, [mentionCandidates, mentionQuery]);
+
   const handleTyping = useCallback((value: string) => {
     setText(value);
-    const cursorMatch = value.match(/(^|\s)@(\w{0,10})$/);
-    setShowMention(!!cursorMatch);
+    const cursorMatch = value.match(/(^|\s)@(\w{0,20})$/);
+    if (cursorMatch) {
+      setShowMention(true);
+      setMentionQuery(cursorMatch[2]);
+      setMentionIndex(0);
+    } else {
+      setShowMention(false);
+      setMentionQuery("");
+    }
     if (value.trim()) {
       setTyping(true);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -104,9 +142,11 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     }
   }, [setTyping]);
 
-  const insertMention = useCallback(() => {
-    setText((prev) => prev.replace(/(^|\s)@\w{0,10}$/, "$1@nexusai "));
+  const insertMention = useCallback((username: string) => {
+    setText((prev) => prev.replace(/(^|\s)@\w{0,20}$/, `$1@${username} `));
     setShowMention(false);
+    setMentionQuery("");
+    setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
   const isBotRoom = useCallback(() => {
