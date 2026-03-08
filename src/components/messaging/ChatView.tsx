@@ -400,6 +400,31 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             {getStatusText()}
           </p>
         </div>
+        {/* Call buttons (DM only, not bot) */}
+        {room.type === "dm" && !isBot && otherUserId && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              title="Audio call"
+              onClick={() => handleStartCall("audio")}
+              disabled={webrtc.callStatus !== "idle"}
+            >
+              <Phone className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              title="Video call"
+              onClick={() => handleStartCall("video")}
+              disabled={webrtc.callStatus !== "idle"}
+            >
+              <Video className="w-4 h-4" />
+            </Button>
+          </>
+        )}
         <VoiceSelector value={elevenLabs.voiceId} onChange={elevenLabs.setVoiceId} />
         <GroupInfoPanel room={room} currentUserId={currentUserId} onlineUsers={onlineUsers} onStartDM={onStartDM} />
         {messages.length > 0 && (
