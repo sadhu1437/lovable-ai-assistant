@@ -18,6 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useReactions } from "@/hooks/useReactions";
@@ -353,18 +354,38 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                             <MoreVertical className="w-3.5 h-3.5" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align={isMe ? "end" : "start"} className="min-w-[160px]">
+                        <DropdownMenuContent
+                          align={isMe ? "end" : "start"}
+                          className="min-w-[180px]"
+                          onKeyDown={(e) => {
+                            const key = e.key.toLowerCase();
+                            if (key === "e" && isMe && canEditMsg(msg) && msg.message_type === "text") {
+                              e.preventDefault(); startEditMsg(msg);
+                            } else if (key === "p") {
+                              e.preventDefault(); handlePinMessage(msg);
+                            } else if (key === "f") {
+                              e.preventDefault(); setForwardMsg(msg);
+                            } else if (key === "d" && isMe) {
+                              e.preventDefault(); setDeleteMsg(msg);
+                            } else if (key === "r" && msg.message_type === "text" && msg.content) {
+                              e.preventDefault(); speak(msg.content || "", msg.id);
+                            }
+                          }}
+                        >
                           {isMe && canEditMsg(msg) && msg.message_type === "text" && (
                             <DropdownMenuItem onClick={() => startEditMsg(msg)}>
                               <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
+                              <DropdownMenuShortcut>E</DropdownMenuShortcut>
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => handlePinMessage(msg)}>
                             {msg.pinned_at ? <PinOff className="w-3.5 h-3.5 mr-2" /> : <Pin className="w-3.5 h-3.5 mr-2" />}
                             {msg.pinned_at ? "Unpin" : "Pin"}
+                            <DropdownMenuShortcut>P</DropdownMenuShortcut>
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setForwardMsg(msg)}>
                             <Forward className="w-3.5 h-3.5 mr-2" /> Forward
+                            <DropdownMenuShortcut>F</DropdownMenuShortcut>
                           </DropdownMenuItem>
                           {msg.message_type === "text" && msg.content && (
                             <>
@@ -376,6 +397,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                               <DropdownMenuItem onClick={() => speak(msg.content || "", msg.id)}>
                                 {speaking === msg.id ? <VolumeX className="w-3.5 h-3.5 mr-2" /> : <Volume2 className="w-3.5 h-3.5 mr-2" />}
                                 {speaking === msg.id ? "Stop Reading" : "Read Aloud"}
+                                <DropdownMenuShortcut>R</DropdownMenuShortcut>
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => elevenLabs.download(msg.content || "", msg.id)} disabled={elevenLabs.loadingId === msg.id}>
                                 <Download className="w-3.5 h-3.5 mr-2" /> Download Audio
@@ -395,6 +417,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => setDeleteMsg(msg)} className="text-destructive focus:text-destructive">
                                 <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                                <DropdownMenuShortcut>D</DropdownMenuShortcut>
                               </DropdownMenuItem>
                             </>
                           )}
