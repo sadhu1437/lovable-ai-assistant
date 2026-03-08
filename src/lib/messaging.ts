@@ -30,6 +30,7 @@ export interface ChatMessage {
   edited_at: string | null;
   pinned_at: string | null;
   pinned_by: string | null;
+  reply_to: string | null;
 }
 
 export interface UserProfile {
@@ -171,7 +172,8 @@ export async function sendMessage(
   senderId: string,
   content: string,
   messageType: "text" | "image" | "file" | "voice" = "text",
-  mediaUrl?: string
+  mediaUrl?: string,
+  replyTo?: string
 ) {
   return supabase.from("chat_messages").insert({
     room_id: roomId,
@@ -179,7 +181,8 @@ export async function sendMessage(
     content,
     message_type: messageType,
     media_url: mediaUrl || null,
-  });
+    reply_to: replyTo || null,
+  } as any);
 }
 
 export async function fetchRoomMessages(roomId: string) {
