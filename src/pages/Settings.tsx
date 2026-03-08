@@ -25,6 +25,68 @@ const AI_MODELS = [
   { value: "openai/gpt-5-nano", label: "GPT-5 Nano", desc: "Speed optimized" },
 ];
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+}
+
+function CacheStatsPanel() {
+  const [stats, setStats] = useState(getAllCacheStats());
+
+  const refresh = () => setStats(getAllCacheStats());
+
+  const handleClear = () => {
+    clearAllCaches();
+    refresh();
+    toast.success("All caches cleared");
+  };
+
+  return (
+    <Card className="border-border bg-card">
+      <CardHeader>
+        <CardTitle className="text-base font-mono">Cache Management</CardTitle>
+        <CardDescription>View memory usage and clear cached data.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {stats.map((s) => {
+          const pct = s.maxBytes > 0 ? (s.bytesUsed / s.maxBytes) * 100 : 0;
+          return (
+            <div key={s.label} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-foreground font-mono">{s.label}</p>
+                <span className="text-xs text-muted-foreground font-mono">
+                  {s.entries} items • {formatBytes(s.bytesUsed)} / {formatBytes(s.maxBytes)}
+                </span>
+              </div>
+              <Progress value={pct} className="h-2" />
+            </div>
+          );
+        })}
+
+        <div className="pt-2 flex items-center justify-between border-t border-border">
+          <div>
+            <p className="text-xs text-muted-foreground">
+              Total: {formatBytes(stats.reduce((a, s) => a + s.bytesUsed, 0))} used
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={refresh} className="font-mono text-xs">
+              Refresh
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleClear} className="gap-1.5 font-mono text-xs">
+              <Trash2 className="w-3 h-3" />
+              Clear All
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Settings() {
   const navigate = useNavigate();
   const { user } = useAuth();
