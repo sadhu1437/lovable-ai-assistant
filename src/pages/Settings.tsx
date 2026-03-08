@@ -111,6 +111,24 @@ function CacheStatsPanel() {
     toast.success(`Data TTL set to ${formatTTL(val)}`);
   };
 
+  const updateAudioSize = (bytes: string) => {
+    const val = Number(bytes);
+    setAudioMaxBytes(val);
+    audioCache.setMaxBytes(val);
+    localStorage.setItem("nexus-cache-size-audio", String(val));
+    refresh();
+    toast.success(`Audio cache limit set to ${formatBytes(val)}`);
+  };
+
+  const updateDataSize = (bytes: string) => {
+    const val = Number(bytes);
+    setDataMaxBytes(val);
+    dataCache.setMaxBytes(val);
+    localStorage.setItem("nexus-cache-size-data", String(val));
+    refresh();
+    toast.success(`Data cache limit set to ${formatBytes(val)}`);
+  };
+
   useEffect(() => {
     const savedAudio = localStorage.getItem("nexus-cache-ttl-audio");
     if (savedAudio) audioCache.setDefaultTTL(Number(savedAudio));
