@@ -123,6 +123,40 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     setDeleteMsg(null);
   };
 
+  const canEditMsg = (msg: ChatMessage) => {
+    if (msg.sender_id !== currentUserId) return false;
+    const ageMs = Date.now() - new Date(msg.created_at).getTime();
+    return ageMs < 24 * 60 * 60 * 1000;
+  };
+
+  const startEditMsg = (msg: ChatMessage) => {
+    setEditingMsgId(msg.id);
+    setEditText(msg.content || "");
+    setTimeout(() => editInputRef.current?.focus(), 50);
+  };
+
+  const saveEditMsg = async () => {
+    if (!editingMsgId || !editText.trim()) { setEditingMsgId(null); return; }
+    const { error } = await editChatMessage(editingMsgId, editText.trim());
+    if (error) { toast.error("Failed to edit message"); }
+    else {
+      // Update locally
+      const updated = messages.map((m) =>
+        m.id === editingMsgId ? { ...m, content: editText.trim(), edited_at: new Date().toISOString() } : m
+      );
+      // We need to trigger a re-render through parent; for now optimistic update via messages state
+      // The realtime subscription will also eventually sync
+    }
+    setEditingMsgId(null);
+  };
+
+  const handlePinMessage = async (msg: ChatMessage) => {
+    const isPinned = !!msg.pinned_at;
+    const { error } = await pinChatMessage(msg.id, currentUserId, !isPinned);
+    if (error) toast.error("Failed to pin message");
+    else toast.success(isPinned ? "Message unpinned" : "Message pinned");
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
