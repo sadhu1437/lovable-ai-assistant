@@ -115,9 +115,10 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   }, [currentUserId, incomingCall?.id]);
 
   const handleStartCall = async (type: CallType) => {
-    if (!otherUserId || isBot) return;
+    const targetId = callTargetUserId || otherUserId;
+    if (!targetId || isBot) return;
     try {
-      await webrtc.startCall(room.id, otherUserId, type);
+      await webrtc.startCall(room.id, targetId, type);
     } catch {
       toast.error("Failed to start call. Check microphone/camera permissions.");
     }
@@ -439,7 +440,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           </p>
         </div>
         {/* Call buttons (DM only, not bot) */}
-        {room.type === "dm" && !isBot && otherUserId && (
+        {room.type === "dm" && !isBot && (callTargetUserId || otherUserId) && (
           <>
             <Button
               variant="ghost"
