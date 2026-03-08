@@ -40,7 +40,24 @@ export function ChatMessage({ message, onEditImage, isEditingImage }: ChatMessag
             {isUser ? "You" : "NexusAI"}
           </p>
           {isUser ? (
-            <p className="text-foreground leading-7 text-[15px]">{message.content}</p>
+            <div>
+              {message.filePreview && (
+                <div className="mb-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary border border-border">
+                  {message.filePreview.isImage && message.filePreview.dataUrl ? (
+                    <img src={message.filePreview.dataUrl} alt={message.filePreview.name} className="w-16 h-16 rounded object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                      <span className="text-lg">📄</span>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-mono text-foreground">{message.filePreview.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{message.filePreview.type}</p>
+                  </div>
+                </div>
+              )}
+              <p className="text-foreground leading-7 text-[15px]">{message.content}</p>
+            </div>
           ) : (
             <>
               <div className="prose prose-invert prose-sm max-w-none text-foreground
