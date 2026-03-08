@@ -61,6 +61,13 @@ serve(async (req) => {
       });
     }
 
+    // If init mode, just return bot user id
+    if (isInit) {
+      return new Response(JSON.stringify({ bot_user_id: botUserId }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Ensure bot is a member of the room
     const { data: membership } = await adminClient
       .from("chat_room_members")
