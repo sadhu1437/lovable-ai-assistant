@@ -1,8 +1,12 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { hydrateAllCaches } from "@/lib/audioCache";
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Hydrate in-memory caches from IndexedDB before rendering
+hydrateAllCaches().finally(() => {
+  createRoot(document.getElementById("root")!).render(<App />);
+});
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, User, Cpu, Sliders, Upload, Database, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, User, Cpu, Sliders, Upload, Database, Trash2, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getAllCacheStats, clearAllCaches, audioCache, dataCache } from "@/lib/audioCache";
+import { getAllCacheStats, clearAllCaches, audioCache, dataCache, getPersistedStats } from "@/lib/audioCache";
 
 const AI_MODELS = [
   { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", desc: "Fast & balanced" },
@@ -51,6 +51,7 @@ function formatTTL(ms: number): string {
 
 function CacheStatsPanel() {
   const [stats, setStats] = useState(getAllCacheStats());
+  const [diskStats, setDiskStats] = useState<{ audioEntries: number; dataEntries: number } | null>(null);
   const [audioTTL, setAudioTTL] = useState(() => {
     const saved = localStorage.getItem("nexus-cache-ttl-audio");
     return saved ? Number(saved) : audioCache.stats.defaultTTL;
@@ -60,12 +61,19 @@ function CacheStatsPanel() {
     return saved ? Number(saved) : dataCache.stats.defaultTTL;
   });
 
-  const refresh = () => setStats(getAllCacheStats());
+  const refresh = () => {
+    setStats(getAllCacheStats());
+    getPersistedStats().then(setDiskStats).catch(() => {});
+  };
+
+  useEffect(() => {
+    getPersistedStats().then(setDiskStats).catch(() => {});
+  }, []);
 
   const handleClear = () => {
     clearAllCaches();
     refresh();
-    toast.success("All caches cleared");
+    toast.success("All caches cleared (memory + disk)");
   };
 
   const updateAudioTTL = (ms: string) => {
@@ -84,7 +92,6 @@ function CacheStatsPanel() {
     toast.success(`Data TTL set to ${formatTTL(val)}`);
   };
 
-  // Restore saved TTLs on mount
   useEffect(() => {
     const savedAudio = localStorage.getItem("nexus-cache-ttl-audio");
     if (savedAudio) audioCache.setDefaultTTL(Number(savedAudio));
@@ -96,7 +103,7 @@ function CacheStatsPanel() {
     <Card className="border-border bg-card">
       <CardHeader>
         <CardTitle className="text-base font-mono">Cache Management</CardTitle>
-        <CardDescription>View memory usage, configure TTL, and clear cached data.</CardDescription>
+        <CardDescription>View memory usage, configure TTL, and clear cached data. Entries persist to disk via IndexedDB.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {stats.map((s) => {
@@ -104,6 +111,9 @@ function CacheStatsPanel() {
           const isAudio = s.label.includes("Audio");
           const currentTTL = isAudio ? audioTTL : dataTTL;
           const onChangeTTL = isAudio ? updateAudioTTL : updateDataTTL;
+          const diskCount = diskStats
+            ? isAudio ? diskStats.audioEntries : diskStats.dataEntries
+            : null;
           return (
             <div key={s.label} className="space-y-2">
               <div className="flex items-center justify-between">
@@ -113,21 +123,28 @@ function CacheStatsPanel() {
                 </span>
               </div>
               <Progress value={pct} className="h-2" />
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-mono">TTL:</span>
-                <Select value={String(currentTTL)} onValueChange={onChangeTTL}>
-                  <SelectTrigger className="h-7 w-24 text-xs font-mono">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TTL_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.ms} value={String(opt.ms)} className="text-xs font-mono">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="text-[10px] text-muted-foreground">Entries expire after this duration</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground font-mono">TTL:</span>
+                  <Select value={String(currentTTL)} onValueChange={onChangeTTL}>
+                    <SelectTrigger className="h-7 w-24 text-xs font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TTL_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.ms} value={String(opt.ms)} className="text-xs font-mono">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {diskCount !== null && (
+                  <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+                    <HardDrive className="w-3 h-3" />
+                    {diskCount} on disk
+                  </span>
+                )}
               </div>
             </div>
           );
@@ -136,7 +153,7 @@ function CacheStatsPanel() {
         <div className="pt-2 flex items-center justify-between border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground">
-              Total: {formatBytes(stats.reduce((a, s) => a + s.bytesUsed, 0))} used
+              Total: {formatBytes(stats.reduce((a, s) => a + s.bytesUsed, 0))} in memory
             </p>
           </div>
           <div className="flex gap-2">
