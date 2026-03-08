@@ -153,7 +153,7 @@ export function ChatMessage({ message }: { message: Message }) {
                     </div>
                   ))}
                 </div>
-              )
+              )}
 
               {/* Like / Dislike buttons */}
               <div className="flex items-center gap-1 mt-4 pt-2">
