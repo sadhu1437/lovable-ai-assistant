@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, Trash2, LogOut, LogIn } from "lucide-react";
+import { Plus, MessageSquare, Trash2, LogOut, LogIn, Image as ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Conversation } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
@@ -9,11 +9,13 @@ interface ChatSidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onGallery: () => void;
+  showGallery: boolean;
   user?: User | null;
   onSignOut?: () => void;
 }
 
-export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, user, onSignOut }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, onGallery, showGallery, user, onSignOut }: ChatSidebarProps) {
   const navigate = useNavigate();
 
   return (
@@ -35,6 +37,17 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
         >
           <Plus className="w-4 h-4" />
           <span className="font-mono text-xs">New Chat</span>
+        </button>
+        <button
+          onClick={onGallery}
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all mt-2 ${
+            showGallery
+              ? "border-primary/50 bg-secondary text-foreground"
+              : "border-border hover:border-primary/50 hover:bg-secondary text-foreground"
+          }`}
+        >
+          <ImageIcon className="w-4 h-4" />
+          <span className="font-mono text-xs">Image Gallery</span>
         </button>
       </div>
 
