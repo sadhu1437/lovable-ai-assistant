@@ -142,6 +142,8 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
             {room.type === "group" ? (
               <Users className="w-4 h-4 text-foreground" />
+            ) : isBot ? (
+              <Bot className="w-4 h-4 text-primary" />
             ) : (
               (() => {
                 const otherAvatar = otherUser?.avatar_url;
@@ -230,6 +232,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             </div>
           );
         })}
+        {botThinking && <TypingBubble names={["NexusAI Bot"]} />}
         <TypingBubble names={typingNames} />
       </div>
 
