@@ -334,11 +334,16 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     return map;
   }, [messages]);
 
-  const otherUser = roomProfiles[room.id] || Object.values(profileByUserId).find((p) => p.user_id !== currentUserId) || null;
-  const isBot = roomProfiles[room.id]?.username === BOT_USERNAME;
+  const otherUser = roomProfiles[room.id] || Object.values(profileByUserId).find((p) => p.user_id !== currentUserId && p.username !== BOT_USERNAME) || Object.values(profileByUserId).find((p) => p.user_id !== currentUserId) || null;
+  const isBot = roomProfiles[room.id]?.username === BOT_USERNAME || (room.type === "dm" && Object.values(profileByUserId).filter(p => p.user_id !== currentUserId).every(p => p.username === BOT_USERNAME));
   const roomName = room.type === "group" ? room.name || "Unnamed Group" : otherUser?.display_name || "Chat";
   const otherUserId = otherUser?.user_id;
   const isOtherOnline = isBot ? true : (otherUserId ? onlineUsers.has(otherUserId) : false);
+
+  // Derive a non-bot other user for calls specifically
+  const callTargetUserId = room.type === "dm" && !isBot
+    ? otherUserId || Object.values(profileByUserId).find(p => p.user_id !== currentUserId && p.username !== BOT_USERNAME)?.user_id
+    : undefined;
 
   const typingNames = Array.from(typingUsers).map((uid) => getDisplayName(uid));
   const typingAvatars = Array.from(typingUsers).map((uid) => getAvatar(uid) || null);
