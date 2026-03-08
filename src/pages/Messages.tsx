@@ -78,7 +78,10 @@ export default function Messages() {
     for (const p of profilesList) {
       profileByUserId[p.user_id] = p;
     }
-    for (const [roomId, userId] of Object.entries(roomToOtherUser)) {
+    for (const [roomId, userIds] of Object.entries(roomToOtherUsers)) {
+      // Prefer non-bot user for DM display
+      const nonBotUser = userIds.find(uid => profileByUserId[uid]?.username !== BOT_USERNAME);
+      const userId = nonBotUser || userIds[0];
       if (profileByUserId[userId]) {
         profileMap[roomId] = profileByUserId[userId];
       }
