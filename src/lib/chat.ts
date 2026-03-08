@@ -4,6 +4,7 @@ export type Message = {
   content: string;
   images?: string[];
   videoUrl?: string;
+  codeContent?: string;
   filePreview?: { name: string; type: string; isImage: boolean; dataUrl?: string };
   timestamp: Date;
 };
@@ -163,6 +164,90 @@ const VIDEO_TRIGGERS = [
 
 export function isVideoRequest(text: string): boolean {
   return VIDEO_TRIGGERS.some((re) => re.test(text));
+}
+
+const CODE_TRIGGERS = [
+  /(?:create|build|make|design|generate|develop)\s+(?:a\s+|an\s+|me\s+(?:a\s+|an\s+)?)?(?:[\w\s]*?\s+)?(?:website|webpage|web\s*page|landing\s*page|site|homepage|web\s*app|webapp)/i,
+  /(?:create|build|make|design|generate|develop)\s+(?:a\s+|an\s+|me\s+(?:a\s+|an\s+)?)?(?:[\w\s]*?\s+)?(?:html|page|portal|dashboard)\b/i,
+  /code\s+(?:a\s+|an\s+)?(?:[\w\s]*?\s+)?(?:website|page|site|app)/i,
+];
+
+export function isCodeRequest(text: string): boolean {
+  // Don't trigger for image/video requests
+  if (isImageRequest(text) || isVideoRequest(text)) return false;
+  return CODE_TRIGGERS.some((re) => re.test(text));
+}
+
+const CODE_GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/code-generate`;
+
+export async function streamCodeGenerate({
+  prompt,
+  existingCode,
+  onDelta,
+  onDone,
+  onError,
+}: {
+  prompt: string;
+  existingCode?: string;
+  onDelta: (text: string) => void;
+  onDone: () => void;
+  onError: (error: string) => void;
+}) {
+  try {
+    const body: any = { prompt };
+    if (existingCode) body.existingCode = existingCode;
+
+    const resp = await fetch(CODE_GENERATE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      onError(data.error || `Error ${resp.status}`);
+      return;
+    }
+
+    if (!resp.body) {
+      onError("No response body");
+      return;
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let idx: number;
+      while ((idx = buffer.indexOf("\n")) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (!line.startsWith("data: ")) continue;
+        const json = line.slice(6).trim();
+        if (json === "[DONE]") { onDone(); return; }
+        try {
+          const parsed = JSON.parse(json);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) onDelta(content);
+        } catch {
+          buffer = line + "\n" + buffer;
+          break;
+        }
+      }
+    }
+    onDone();
+  } catch (e) {
+    onError(e instanceof Error ? e.message : "Unknown error");
+  }
 }
 
 const VIDEO_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/video-generate`;

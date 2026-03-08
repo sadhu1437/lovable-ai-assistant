@@ -5,7 +5,7 @@ import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
-import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo, analyzeFile } from "@/lib/chat";
+import { streamChat, generateId, isImageRequest, isVideoRequest, isCodeRequest, generateImage, generateVideo, analyzeFile, streamCodeGenerate } from "@/lib/chat";
 import { extractFileForAnalysis } from "@/lib/fileExtraction";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X, Download } from "lucide-react";
@@ -179,7 +179,62 @@ const Index = () => {
       return;
     }
 
-    // Check if this is a video generation request
+    // Check if this is a code/website generation request
+    if (isCodeRequest(content)) {
+      let codeAccumulator = "";
+      await streamCodeGenerate({
+        prompt: content,
+        onDelta: (delta) => {
+          codeAccumulator += delta;
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== convId) return c;
+              const existing = c.messages.find((m) => m.id === localAssistantId);
+              if (existing) {
+                return {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === localAssistantId ? { ...m, content: "Here's your website! ✨", codeContent: codeAccumulator } : m
+                  ),
+                };
+              }
+              return {
+                ...c,
+                messages: [
+                  ...c.messages,
+                  { id: localAssistantId, role: "assistant" as const, content: "Here's your website! ✨", codeContent: codeAccumulator, timestamp: new Date() },
+                ],
+              };
+            })
+          );
+        },
+        onDone: async () => {
+          setIsLoading(false);
+          if (user) {
+            const finalConv = conversationsRef.current.find((c) => c.id === convId);
+            const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
+            if (assistantMsg) {
+              try {
+                const dbId = await saveMessage(convId!, "assistant", assistantMsg.content);
+                setConversations((prev) =>
+                  prev.map((c) =>
+                    c.id === convId
+                      ? { ...c, messages: c.messages.map((m) => m.id === localAssistantId ? { ...m, id: dbId } : m) }
+                      : c
+                  )
+                );
+              } catch { /* non-critical */ }
+            }
+          }
+        },
+        onError: (err) => {
+          setIsLoading(false);
+          toast.error(err);
+        },
+      });
+      return;
+    }
+
     if (isVideoRequest(content)) {
       await generateVideo({
         prompt: content,
@@ -338,6 +393,73 @@ const Index = () => {
       },
       onError: (err) => {
         setIsEditingImage(false);
+        toast.error(err);
+      },
+    });
+  };
+
+  const [isEditingCode, setIsEditingCode] = useState(false);
+
+  const handleCanvasEdit = async (editPrompt: string, existingCode: string) => {
+    if (!activeId) return;
+    const convId = activeId;
+
+    const userMsg: Message = {
+      id: generateId(),
+      role: "user",
+      content: `✏️ Edit code: ${editPrompt}`,
+      timestamp: new Date(),
+    };
+    setConversations((prev) =>
+      prev.map((c) => c.id === convId ? { ...c, messages: [...c.messages, userMsg] } : c)
+    );
+
+    setIsEditingCode(true);
+    const localAssistantId = generateId();
+    let codeAccumulator = "";
+
+    await streamCodeGenerate({
+      prompt: editPrompt,
+      existingCode,
+      onDelta: (delta) => {
+        codeAccumulator += delta;
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== convId) return c;
+            const existing = c.messages.find((m) => m.id === localAssistantId);
+            if (existing) {
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === localAssistantId ? { ...m, codeContent: codeAccumulator } : m
+                ),
+              };
+            }
+            return {
+              ...c,
+              messages: [
+                ...c.messages,
+                { id: localAssistantId, role: "assistant" as const, content: "Updated your code! ✨", codeContent: codeAccumulator, timestamp: new Date() },
+              ],
+            };
+          })
+        );
+      },
+      onDone: async () => {
+        setIsEditingCode(false);
+        if (user) {
+          const finalConv = conversationsRef.current.find((c) => c.id === convId);
+          const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
+          if (assistantMsg) {
+            try {
+              await saveMessage(convId, "user", userMsg.content);
+              await saveMessage(convId, "assistant", assistantMsg.content);
+            } catch { /* non-critical */ }
+          }
+        }
+      },
+      onError: (err) => {
+        setIsEditingCode(false);
         toast.error(err);
       },
     });
@@ -540,7 +662,9 @@ const Index = () => {
                   key={msg.id}
                   message={msg}
                   onEditImage={handleEditImage}
+                  onCanvasEdit={handleCanvasEdit}
                   isEditingImage={isEditingImage}
+                  isEditingCode={isEditingCode}
                 />
               ))}
               {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && <TypingIndicator />}

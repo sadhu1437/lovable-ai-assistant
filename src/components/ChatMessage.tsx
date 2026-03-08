@@ -5,14 +5,17 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2 } from "lucide-react";
 import { useState } from "react";
 import type { Message } from "@/lib/chat";
+import { CodeCanvas } from "./CodeCanvas";
 
 interface ChatMessageProps {
   message: Message;
   onEditImage?: (imageUrl: string, prompt: string) => void;
+  onCanvasEdit?: (editPrompt: string, existingCode: string) => void;
   isEditingImage?: boolean;
+  isEditingCode?: boolean;
 }
 
-export function ChatMessage({ message, onEditImage, isEditingImage }: ChatMessageProps) {
+export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage, isEditingCode }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null);
@@ -253,6 +256,15 @@ export function ChatMessage({ message, onEditImage, isEditingImage }: ChatMessag
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* Code Canvas */}
+              {message.codeContent && (
+                <CodeCanvas
+                  code={message.codeContent}
+                  onEditRequest={(prompt, code) => onCanvasEdit?.(prompt, code)}
+                  isEditing={isEditingCode}
+                />
               )}
 
               {/* Like / Dislike buttons */}

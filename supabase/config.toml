@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.file-analyze]
 verify_jwt = false
+
+[functions.code-generate]
+verify_jwt = false
