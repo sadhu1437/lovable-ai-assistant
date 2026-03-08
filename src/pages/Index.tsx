@@ -32,6 +32,7 @@ const Index = () => {
   const [showGallery, setShowGallery] = useState(false);
   const [isEditingImage, setIsEditingImage] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputHandle>(null);
