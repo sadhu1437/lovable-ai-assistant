@@ -145,6 +145,14 @@ export default function Messages() {
       )
       .on(
         "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "chat_messages", filter: `room_id=eq.${activeRoomId}` },
+        (payload) => {
+          const updated = payload.new as ChatMessage;
+          setMessages((prev) => prev.map((m) => m.id === updated.id ? updated : m));
+        }
+      )
+      .on(
+        "postgres_changes",
         { event: "DELETE", schema: "public", table: "chat_messages", filter: `room_id=eq.${activeRoomId}` },
         (payload) => {
           const deletedId = (payload.old as any)?.id;
