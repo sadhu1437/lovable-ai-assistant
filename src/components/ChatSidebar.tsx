@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Conversation } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
 import { useTheme } from "@/hooks/useTheme";
+import { prefetchRoute } from "@/lib/routePrefetch";
 
 interface ChatSidebarProps {
   conversations: Conversation[];
