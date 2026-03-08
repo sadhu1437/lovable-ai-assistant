@@ -15,6 +15,7 @@ export type Conversation = {
   messages: Message[];
   category: string;
   createdAt: Date;
+  pinned?: boolean;
 };
 
 export type Category = {

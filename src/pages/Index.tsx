@@ -18,6 +18,7 @@ import {
   createConversation as dbCreateConversation,
   saveMessage,
   deleteConversation as dbDeleteConversation,
+  togglePinConversation,
 } from "@/lib/db";
 import { exportAsMarkdown, exportAsPdf } from "@/lib/exportChat";
 
@@ -377,6 +378,24 @@ const Index = () => {
     }
   };
 
+  const handlePinConversation = async (id: string, pinned: boolean) => {
+    setConversations((prev) =>
+      prev
+        .map((c) => (c.id === id ? { ...c, pinned } : c))
+        .sort((a, b) => {
+          if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        })
+    );
+    if (user) {
+      try {
+        await togglePinConversation(id, pinned);
+      } catch {
+        toast.error("Failed to update pin status");
+      }
+    }
+  };
+
   const handleEditImage = async (sourceImage: string, editPrompt: string) => {
     if (!activeId) return;
     const convId = activeId;
@@ -692,6 +711,7 @@ const Index = () => {
           onSelect={(id) => { setActiveId(id); setShowGallery(false); setSidebarOpen(false); }}
           onNew={() => { setActiveId(null); setShowGallery(false); setSidebarOpen(false); }}
           onDelete={handleDeleteConversation}
+          onPin={handlePinConversation}
           onGallery={() => { setShowGallery(!showGallery); setActiveId(null); setSidebarOpen(false); }}
           showGallery={showGallery}
           user={user}

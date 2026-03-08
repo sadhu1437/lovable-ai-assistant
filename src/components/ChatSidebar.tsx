@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, Trash2, LogOut, LogIn, Image as ImageIcon, Sun, Moon } from "lucide-react";
+import { Plus, MessageSquare, Trash2, LogOut, LogIn, Image as ImageIcon, Sun, Moon, Pin, PinOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Conversation } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
@@ -10,13 +10,14 @@ interface ChatSidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onPin: (id: string, pinned: boolean) => void;
   onGallery: () => void;
   showGallery: boolean;
   user?: User | null;
   onSignOut?: () => void;
 }
 
-export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, onGallery, showGallery, user, onSignOut }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, onPin, onGallery, showGallery, user, onSignOut }: ChatSidebarProps) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
@@ -68,12 +69,22 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
             >
+              {conv.pinned && <Pin className="w-3 h-3 shrink-0 text-primary" />}
               <MessageSquare className="w-4 h-4 shrink-0" />
               <span className="truncate flex-1 text-xs">{conv.title}</span>
-              <Trash2
-                className="w-3 h-3 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all shrink-0"
-                onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
-              />
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onPin(conv.id, !conv.pinned); }}
+                  className="p-1 hover:text-primary transition-colors"
+                  title={conv.pinned ? "Unpin" : "Pin"}
+                >
+                  {conv.pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+                </button>
+                <Trash2
+                  className="w-3 h-3 hover:text-destructive transition-colors shrink-0"
+                  onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
+                />
+              </div>
             </button>
           ))
         )}
