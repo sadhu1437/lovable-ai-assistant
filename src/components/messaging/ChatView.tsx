@@ -471,8 +471,8 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             {getStatusText()}
           </p>
         </div>
-        {/* Call buttons (DM only, not bot) */}
-        {room.type === "dm" && !isBot && (callTargetUserId || otherUserId) && (
+        {/* Call buttons — DM (non-bot) OR group chats */}
+        {((room.type === "dm" && !isBot && (callTargetUserId || otherUserId)) || room.type === "group") && (
           <>
             <Button
               variant="ghost"
