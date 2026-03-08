@@ -74,6 +74,10 @@ const Index = () => {
         e.preventDefault();
         chatInputRef.current?.focus();
       }
+      if (mod && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
