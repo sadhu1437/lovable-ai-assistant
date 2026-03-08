@@ -40,6 +40,7 @@ export interface UserProfile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  gender: string | null;
 }
 
 export async function searchUsers(query: string): Promise<UserProfile[]> {

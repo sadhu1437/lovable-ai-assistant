@@ -236,6 +236,7 @@ export default function Settings() {
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bio, setBio] = useState("");
+  const [gender, setGender] = useState("");
   const [defaultModel, setDefaultModel] = useState(() =>
     localStorage.getItem("nexus-default-model") || "google/gemini-3-flash-preview"
   );
@@ -266,6 +267,7 @@ export default function Settings() {
           setAvatarUrl(data.avatar_url || "");
           setUsername((data as any).username || "");
           setBio((data as any).bio || "");
+          setGender((data as any).gender || "");
         }
         setLoading(false);
       });
@@ -276,7 +278,7 @@ export default function Settings() {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null, bio: bio || null } as any)
+      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null, bio: bio || null, gender: gender || null } as any)
       .eq("user_id", user.id);
     setSaving(false);
     if (error) {
