@@ -170,6 +170,8 @@ export default function Messages() {
           typingUsers={typingUsers}
           setTyping={setTyping}
           readBy={readBy}
+          allRooms={rooms}
+          roomProfiles={roomProfiles}
         />
       ) : (
         <div className="flex-1 hidden md:flex items-center justify-center bg-background">

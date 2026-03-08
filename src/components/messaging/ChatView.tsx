@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -14,6 +14,7 @@ import { VoiceRecorder } from "./VoiceRecorder";
 import { VoicePlayer } from "./VoicePlayer";
 import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
 import { useReactions } from "@/hooks/useReactions";
+import { ForwardMessageDialog } from "./ForwardMessageDialog";
 
 interface ChatViewProps {
   room: ChatRoom;
@@ -25,12 +26,15 @@ interface ChatViewProps {
   typingUsers: Set<string>;
   setTyping: (isTyping: boolean) => void;
   readBy: Record<string, string[]>;
+  allRooms?: ChatRoom[];
+  roomProfiles?: Record<string, UserProfile>;
 }
 
-export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy }: ChatViewProps) {
+export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {} }: ChatViewProps) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [botThinking, setBotThinking] = useState(false);
+  const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -211,12 +215,19 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                       <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                     )}
                   </div>
-                  {/* Reaction picker - appears on hover */}
-                  <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1`}>
+                  {/* Actions - appears on hover */}
+                  <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}>
                     <ReactionPicker
                       onSelect={(emoji) => toggleReaction(msg.id, emoji)}
                       align={isMe ? "right" : "left"}
                     />
+                    <button
+                      onClick={() => setForwardMsg(msg)}
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      title="Forward"
+                    >
+                      <Forward className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
                 {/* Reaction display */}
@@ -259,6 +270,16 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           )}
         </div>
       </div>
+
+      <ForwardMessageDialog
+        open={forwardMsg !== null}
+        onClose={() => setForwardMsg(null)}
+        message={forwardMsg}
+        rooms={allRooms}
+        roomProfiles={roomProfiles}
+        currentRoomId={room.id}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 }
