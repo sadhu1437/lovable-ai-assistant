@@ -26,9 +26,10 @@ interface RoomListProps {
   roomProfiles: Record<string, UserProfile>;
   currentUserId: string;
   onlineUsers: Set<string>;
+  mentionCounts?: Record<string, number>;
 }
 
-export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, onChatWithBot, onDeleteRoom, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
+export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, onChatWithBot, onDeleteRoom, roomProfiles, currentUserId, onlineUsers, mentionCounts = {} }: RoomListProps) {
   const [search, setSearch] = useState("");
   const [deleteRoom, setDeleteRoom] = useState<ChatRoom | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -164,6 +165,11 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
                     {isRoomBot(room) ? "AI Assistant" : room.type === "group" ? "Group" : isOnline ? "Online" : "Offline"}
                   </p>
                 </div>
+                {(mentionCounts[room.id] || 0) > 0 && (
+                  <span className="shrink-0 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold font-mono">
+                    @{mentionCounts[room.id]}
+                  </span>
+                )}
                 {/* Delete button visible on hover (desktop) */}
                 <div
                   className="hidden md:flex shrink-0 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors opacity-70 group-hover:opacity-100"

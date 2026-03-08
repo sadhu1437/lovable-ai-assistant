@@ -40,6 +40,56 @@ export default function Messages() {
 
   const { onlineUsers, typingUsers, setTyping } = usePresence(user?.id, activeRoomId);
   const { readBy } = useReadReceipts(activeRoomId, user?.id, messages);
+  const [mentionCounts, setMentionCounts] = useState<Record<string, number>>({});
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
+  const activeRoomIdRef = useRef(activeRoomId);
+  activeRoomIdRef.current = activeRoomId;
+
+  // Fetch current user's username for mention detection
+  useEffect(() => {
+    if (!user) return;
+    fetchProfileByUserId(user.id).then((p) => {
+      if (p?.username) setCurrentUsername(p.username);
+    });
+  }, [user]);
+
+  // Subscribe to all rooms for mention detection
+  useEffect(() => {
+    if (!user || !currentUsername || rooms.length === 0) return;
+    const channel = supabase
+      .channel("mention-tracker")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages" },
+        (payload) => {
+          const msg = payload.new as ChatMessage;
+          // Skip own messages and messages in active room
+          if (msg.sender_id === user.id) return;
+          if (msg.room_id === activeRoomIdRef.current) return;
+          // Check if message mentions current user
+          const mentionPattern = new RegExp(`(?:^|\\s)@${currentUsername}\\b`, "i");
+          if (msg.content && mentionPattern.test(msg.content)) {
+            setMentionCounts((prev) => ({
+              ...prev,
+              [msg.room_id]: (prev[msg.room_id] || 0) + 1,
+            }));
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, currentUsername, rooms]);
+
+  // Clear mentions when opening a room
+  const handleSelectRoom = useCallback((roomId: string) => {
+    setActiveRoomId(roomId);
+    setMentionCounts((prev) => {
+      if (!prev[roomId]) return prev;
+      const next = { ...prev };
+      delete next[roomId];
+      return next;
+    });
+  }, []);
 
   // Load rooms — batch profile fetching with cache
   const loadRooms = useCallback(async () => {
@@ -200,7 +250,7 @@ export default function Messages() {
         <RoomList
           rooms={rooms}
           activeRoomId={activeRoomId}
-          onSelectRoom={setActiveRoomId}
+          onSelectRoom={handleSelectRoom}
           onNewDM={() => setDialogMode("dm")}
           onNewGroup={() => setDialogMode("group")}
           onChatWithBot={async () => {
@@ -229,6 +279,7 @@ export default function Messages() {
           roomProfiles={roomProfiles}
           currentUserId={user.id}
           onlineUsers={onlineUsers}
+          mentionCounts={mentionCounts}
         />
       </div>
 
