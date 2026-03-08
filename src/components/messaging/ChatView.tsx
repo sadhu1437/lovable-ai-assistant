@@ -132,15 +132,22 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
   const handleTyping = useCallback((value: string) => {
     setText(value);
-    const cursorMatch = value.match(/(^|\s)@(\w{0,20})$/);
-    if (cursorMatch) {
-      setShowMention(true);
-      setMentionQuery(cursorMatch[2]);
-      setMentionIndex(0);
+
+    if (room.type === "group") {
+      const cursorMatch = value.match(/(^|\s)@(\w{0,20})$/);
+      if (cursorMatch) {
+        setShowMention(true);
+        setMentionQuery(cursorMatch[2]);
+        setMentionIndex(0);
+      } else {
+        setShowMention(false);
+        setMentionQuery("");
+      }
     } else {
       setShowMention(false);
       setMentionQuery("");
     }
+
     if (value.trim()) {
       setTyping(true);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -148,7 +155,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     } else {
       setTyping(false);
     }
-  }, [setTyping]);
+  }, [setTyping, room.type]);
 
   const insertMention = useCallback((username: string) => {
     setText((prev) => prev.replace(/(^|\s)@\w{0,20}$/, `$1@${username} `));
@@ -182,7 +189,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     if (error) { toast.error("Failed to send message"); setSending(false); return; }
     setSending(false);
 
-    const mentionsBot = /(?:^|\s)@nexusai(?:-bot)?\b/i.test(trimmed);
+    const mentionsBot = room.type === "group" && /(?:^|\s)@nexusai(?:-bot)?\b/i.test(trimmed);
     const botRoom = isBotRoom();
     if (botRoom || mentionsBot) {
       setBotThinking(true);
@@ -572,7 +579,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
       {/* Input */}
       <div className="relative px-4 py-3 border-t border-border bg-card">
         {/* @mention autocomplete */}
-        {showMention && filteredMentions.length > 0 && (
+        {room.type === "group" && showMention && filteredMentions.length > 0 && (
           <div className="absolute bottom-full left-4 right-4 mb-1 z-10 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg">
             {filteredMentions.map((c, i) => (
               <button
@@ -622,7 +629,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             value={text}
             onChange={(e) => handleTyping(e.target.value)}
             onKeyDown={(e) => {
-              if (showMention && filteredMentions.length > 0) {
+              if (room.type === "group" && showMention && filteredMentions.length > 0) {
                 if (e.key === "ArrowDown") { e.preventDefault(); setMentionIndex(i => Math.min(i + 1, filteredMentions.length - 1)); return; }
                 if (e.key === "ArrowUp") { e.preventDefault(); setMentionIndex(i => Math.max(i - 1, 0)); return; }
                 if (e.key === "Tab" || e.key === "Enter") {
@@ -638,7 +645,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
               }
               if (e.key === "Enter" && !e.shiftKey) handleSend();
             }}
-            placeholder="Type a message... (@ to mention someone)"
+            placeholder={room.type === "group" ? "Type a message... (@ to mention someone)" : "Type a message..."}
             className="text-sm font-mono"
           />
           {text.trim() ? (
