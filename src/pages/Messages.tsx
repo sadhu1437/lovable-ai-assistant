@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { useNotificationContext } from "@/hooks/useNotificationContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +29,7 @@ import {
 export default function Messages() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { notifications, unreadCount, loading: notifLoading, markAsRead, markAllAsRead, clearAll } = useNotificationContext();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -241,6 +244,17 @@ export default function Messages() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <span className="text-sm font-semibold text-foreground font-mono flex-1">Messages</span>
+          <NotificationCenter
+            notifications={notifications}
+            unreadCount={unreadCount}
+            loading={notifLoading}
+            onMarkAsRead={markAsRead}
+            onMarkAllAsRead={markAllAsRead}
+            onClearAll={clearAll}
+            onNotificationClick={(notif) => {
+              if (notif.room_id) handleSelectRoom(notif.room_id);
+            }}
+          />
           <MessageSearch
             rooms={rooms}
             roomProfiles={roomProfiles}
