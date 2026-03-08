@@ -176,6 +176,47 @@ const Index = () => {
       return;
     }
 
+    // Check if this is a video generation request
+    if (isVideoRequest(content)) {
+      await generateVideo({
+        prompt: content,
+        onResult: async (text, videoUrl) => {
+          const assistantMsg: Message = {
+            id: localAssistantId,
+            role: "assistant",
+            content: text,
+            videoUrl: videoUrl || undefined,
+            timestamp: new Date(),
+          };
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === convId
+                ? { ...c, messages: [...c.messages, assistantMsg] }
+                : c
+            )
+          );
+          setIsLoading(false);
+          if (user) {
+            try {
+              const dbId = await saveMessage(convId!, "assistant", text);
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === convId
+                    ? { ...c, messages: c.messages.map((m) => m.id === localAssistantId ? { ...m, id: dbId } : m) }
+                    : c
+                )
+              );
+            } catch { /* non-critical */ }
+          }
+        },
+        onError: (err) => {
+          setIsLoading(false);
+          toast.error(err);
+        },
+      });
+      return;
+    }
+
     const existingMessages = conversationsRef.current.find((c) => c.id === convId)?.messages || [];
     const allMessages = [
       ...existingMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -185,6 +226,7 @@ const Index = () => {
     await streamChat({
       messages: allMessages,
       category,
+      model,
       onDelta: (delta) => {
         setConversations((prev) =>
           prev.map((c) => {
