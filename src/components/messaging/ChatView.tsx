@@ -208,9 +208,13 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             placeholder="Type a message..."
             className="text-sm font-mono"
           />
-          <Button size="icon" onClick={handleSend} disabled={!text.trim() || sending}>
-            <Send className="w-4 h-4" />
-          </Button>
+          {text.trim() ? (
+            <Button size="icon" onClick={handleSend} disabled={sending}>
+              <Send className="w-4 h-4" />
+            </Button>
+          ) : (
+            <VoiceRecorder roomId={room.id} senderId={currentUserId} />
+          )}
         </div>
       </div>
     </div>
