@@ -254,6 +254,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                     >
                       <Forward className="w-3.5 h-3.5" />
                     </button>
+                    {isMe && (
+                      <button
+                        onClick={() => setDeleteMsg(msg)}
+                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 {/* Reaction display */}
