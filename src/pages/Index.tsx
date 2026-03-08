@@ -403,6 +403,37 @@ const Index = () => {
     }
   };
 
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    // Optimistic update
+    setConversations((prev) =>
+      prev.map((c) => ({
+        ...c,
+        messages: c.messages.map((m) =>
+          m.id === messageId ? { ...m, content: newContent, editedAt: new Date() } : m
+        ),
+      }))
+    );
+    if (user) {
+      try { await updateMessageContent(messageId, newContent); }
+      catch { toast.error("Failed to edit message"); }
+    }
+  };
+
+  const handleToggleBookmark = async (messageId: string, bookmarked: boolean) => {
+    setConversations((prev) =>
+      prev.map((c) => ({
+        ...c,
+        messages: c.messages.map((m) =>
+          m.id === messageId ? { ...m, bookmarked } : m
+        ),
+      }))
+    );
+    if (user) {
+      try { await toggleBookmark(messageId, user.id, bookmarked); }
+      catch { toast.error("Failed to update bookmark"); }
+    }
+  };
+
   const handleEditImage = async (sourceImage: string, editPrompt: string) => {
     if (!activeId) return;
     const convId = activeId;
