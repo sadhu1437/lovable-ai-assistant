@@ -21,6 +21,14 @@ export type Category = {
   description: string;
 };
 
+export type AIModel = {
+  id: string;
+  label: string;
+  provider: string;
+  icon: string;
+  description: string;
+};
+
 export const categories: Category[] = [
   { id: "general", label: "General", icon: "⚡", description: "Any topic, no limits" },
   { id: "coding", label: "Coding", icon: "💻", description: "Code solutions & debugging" },
@@ -29,17 +37,31 @@ export const categories: Category[] = [
   { id: "education", label: "Education", icon: "📚", description: "Learn anything" },
 ];
 
+export const aiModels: AIModel[] = [
+  { id: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", icon: "✦", description: "Fast & capable (default)" },
+  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", provider: "Google", icon: "✦", description: "Top-tier reasoning & multimodal" },
+  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", icon: "✦", description: "Balanced speed & quality" },
+  { id: "google/gemini-2.5-flash-lite", label: "Gemini Lite", provider: "Google", icon: "✦", description: "Ultra-fast, lightweight tasks" },
+  { id: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", provider: "Google", icon: "✦", description: "Next-gen reasoning" },
+  { id: "openai/gpt-5", label: "GPT-5", provider: "OpenAI", icon: "◉", description: "Powerful all-rounder" },
+  { id: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", icon: "◉", description: "Strong & cost-effective" },
+  { id: "openai/gpt-5-nano", label: "GPT-5 Nano", provider: "OpenAI", icon: "◉", description: "Speed-optimized" },
+  { id: "openai/gpt-5.2", label: "GPT-5.2", provider: "OpenAI", icon: "◉", description: "Latest enhanced reasoning" },
+];
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export async function streamChat({
   messages,
   category,
+  model,
   onDelta,
   onDone,
   onError,
 }: {
   messages: { role: string; content: string }[];
   category: string;
+  model?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
@@ -51,7 +73,7 @@ export async function streamChat({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages, category }),
+      body: JSON.stringify({ messages, category, model }),
     });
 
     if (!resp.ok) {
