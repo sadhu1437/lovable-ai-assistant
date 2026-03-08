@@ -55,19 +55,27 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
             className="pl-8 h-8 text-xs font-mono"
           />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <button
-            onClick={onNewDM}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-xs text-foreground transition-all font-mono"
+            onClick={onChatWithBot}
+            className="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs text-primary transition-all font-mono font-medium"
           >
-            <MessageCircle className="w-3.5 h-3.5" /> New Chat
+            <Bot className="w-3.5 h-3.5" /> Chat with NexusAI
           </button>
-          <button
-            onClick={onNewGroup}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-xs text-foreground transition-all font-mono"
-          >
-            <Users className="w-3.5 h-3.5" /> New Group
-          </button>
+          <div className="flex gap-1.5">
+            <button
+              onClick={onNewDM}
+              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-xs text-foreground transition-all font-mono"
+            >
+              <MessageCircle className="w-3.5 h-3.5" /> New Chat
+            </button>
+            <button
+              onClick={onNewGroup}
+              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-xs text-foreground transition-all font-mono"
+            >
+              <Users className="w-3.5 h-3.5" /> New Group
+            </button>
+          </div>
         </div>
       </div>
 
