@@ -6,16 +6,18 @@ export async function loadConversations(userId: string): Promise<Conversation[]>
     .from("conversations")
     .select("*")
     .eq("user_id", userId)
+    .order("pinned", { ascending: false })
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
 
-  return (data || []).map((c) => ({
+  return (data || []).map((c: any) => ({
     id: c.id,
     title: c.title,
     messages: [],
     category: c.category,
     createdAt: new Date(c.created_at),
+    pinned: c.pinned ?? false,
   }));
 }
 
