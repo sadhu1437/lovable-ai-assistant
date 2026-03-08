@@ -26,6 +26,7 @@ interface RoomListProps {
   roomProfiles: Record<string, UserProfile>;
   currentUserId: string;
   onlineUsers: Set<string>;
+  mentionCounts?: Record<string, number>;
 }
 
 export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, onChatWithBot, onDeleteRoom, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
