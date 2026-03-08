@@ -338,11 +338,12 @@ export function guessFileType(fileName: string): string {
     yaml: "text/yaml", yml: "text/yaml", log: "text/plain",
     pdf: "application/pdf", doc: "application/msword",
     docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
     gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
-    java: "text/x-java", c: "text/x-c", cpp: "text/x-c++",
-    rb: "text/x-ruby", go: "text/x-go", rs: "text/x-rust",
-    sql: "text/x-sql", sh: "text/x-shellscript",
   };
   return map[ext] || "application/octet-stream";
 }

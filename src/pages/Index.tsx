@@ -363,14 +363,22 @@ const Index = () => {
       setActiveId(convId);
     }
 
-    const isImage = file.type.startsWith("image/");
-    const isBinary = file.type.startsWith("application/pdf") || 
-                     file.type.startsWith("application/vnd") ||
-                     file.type.startsWith("application/msword") ||
-                     file.name.endsWith(".pdf") || file.name.endsWith(".doc") || file.name.endsWith(".docx");
+    const normalizedName = file.name.toLowerCase();
+    const fileType = file.type || guessFileType(normalizedName);
+    const isImage = fileType.startsWith("image/");
+    const isBinary =
+      fileType.startsWith("application/pdf") ||
+      fileType.startsWith("application/vnd") ||
+      fileType.startsWith("application/msword") ||
+      normalizedName.endsWith(".pdf") ||
+      normalizedName.endsWith(".doc") ||
+      normalizedName.endsWith(".docx") ||
+      normalizedName.endsWith(".xls") ||
+      normalizedName.endsWith(".xlsx") ||
+      normalizedName.endsWith(".ppt") ||
+      normalizedName.endsWith(".pptx");
     let fileContent: string;
     let dataUrl: string | undefined;
-    const fileType = file.type || guessFileType(file.name);
 
     try {
       if (isImage || isBinary) {
