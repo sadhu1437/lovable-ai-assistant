@@ -108,7 +108,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     const { error } = await supabase.from("chat_messages").delete().eq("id", deleteMsg.id);
     if (error) { toast.error("Failed to delete message"); }
     else {
-      setMessages((prev) => prev.filter((m) => m.id !== deleteMsg.id));
+      onDeleteMessage?.(deleteMsg.id);
       toast.success("Message deleted");
     }
     setDeleteMsg(null);
