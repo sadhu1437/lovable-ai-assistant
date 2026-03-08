@@ -141,6 +141,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
         ) : (
           <button
             onClick={() => navigate("/auth")}
+            onMouseEnter={() => prefetchRoute("/auth")}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary hover:bg-muted text-sm text-foreground transition-all"
           >
             <LogIn className="w-4 h-4" />
