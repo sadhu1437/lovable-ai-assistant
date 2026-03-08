@@ -437,7 +437,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || ""}</ReactMarkdown>
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                        <p className="whitespace-pre-wrap break-words">
+                          {(msg.content || "").split(/(@\w+)/g).map((part, i) =>
+                            /^@\w+/.test(part) ? (
+                              <span key={i} className="font-semibold text-primary">{part}</span>
+                            ) : (
+                              <span key={i}>{part}</span>
+                            )
+                          )}
+                        </p>
                       )}
                       {msg.edited_at && (
                         <span className="text-[9px] opacity-50 italic ml-1">(edited)</span>
