@@ -46,8 +46,31 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
   const [showAddMember, setShowAddMember] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<MemberWithProfile | null>(null);
   const [open, setOpen] = useState(false);
+  const [addingBot, setAddingBot] = useState(false);
 
   const currentMember = members.find(m => m.member.user_id === currentUserId);
+  const hasBotMember = members.some(m => m.profile?.username === BOT_USERNAME);
+
+  const addBotToGroup = async () => {
+    setAddingBot(true);
+    try {
+      const botUserId = await getBotUserId();
+      if (!botUserId) {
+        // Init bot via edge function if not found
+        const { data } = await supabase.functions.invoke("chat-bot-reply", {
+          body: { room_id: "init", message: "hello" },
+        });
+        const id = data?.bot_user_id;
+        if (!id) { toast.error("Could not find NexusAI Bot"); setAddingBot(false); return; }
+        await addMember(id);
+      } else {
+        await addMember(botUserId);
+      }
+    } catch {
+      toast.error("Failed to add bot");
+    }
+    setAddingBot(false);
+  };
   const isAdmin = currentMember?.member.role === "admin";
 
   const loadMembers = useCallback(async () => {
