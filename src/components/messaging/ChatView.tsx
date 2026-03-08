@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -15,6 +15,16 @@ import { VoicePlayer } from "./VoicePlayer";
 import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
 import { useReactions } from "@/hooks/useReactions";
 import { ForwardMessageDialog } from "./ForwardMessageDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ChatViewProps {
   room: ChatRoom;
@@ -28,13 +38,15 @@ interface ChatViewProps {
   readBy: Record<string, string[]>;
   allRooms?: ChatRoom[];
   roomProfiles?: Record<string, UserProfile>;
+  onDeleteMessage?: (msgId: string) => void;
 }
 
-export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {} }: ChatViewProps) {
+export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {}, onDeleteMessage }: ChatViewProps) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [botThinking, setBotThinking] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
+  const [deleteMsg, setDeleteMsg] = useState<ChatMessage | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -89,6 +101,17 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
       if (botErr) toast.error("Bot failed to reply");
       setBotThinking(false);
     }
+  };
+
+  const handleDeleteMessage = async () => {
+    if (!deleteMsg) return;
+    const { error } = await supabase.from("chat_messages").delete().eq("id", deleteMsg.id);
+    if (error) { toast.error("Failed to delete message"); }
+    else {
+      onDeleteMessage?.(deleteMsg.id);
+      toast.success("Message deleted");
+    }
+    setDeleteMsg(null);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,6 +254,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                     >
                       <Forward className="w-3.5 h-3.5" />
                     </button>
+                    {isMe && (
+                      <button
+                        onClick={() => setDeleteMsg(msg)}
+                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 {/* Reaction display */}
@@ -283,6 +315,23 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
         currentRoomId={room.id}
         currentUserId={currentUserId}
       />
+
+      <AlertDialog open={deleteMsg !== null} onOpenChange={(open) => !open && setDeleteMsg(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete message?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The message will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMessage} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
