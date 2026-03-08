@@ -55,9 +55,10 @@ interface ChatViewProps {
   allRooms?: ChatRoom[];
   roomProfiles?: Record<string, UserProfile>;
   onDeleteMessage?: (msgId: string) => void;
+  onStartDM?: (userId: string) => void;
 }
 
-export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {}, onDeleteMessage }: ChatViewProps) {
+export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {}, onDeleteMessage, onStartDM }: ChatViewProps) {
   const [text, setText] = useState("");
   const [showMention, setShowMention] = useState(false);
   const [sending, setSending] = useState(false);
@@ -288,7 +289,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           </p>
         </div>
         <VoiceSelector value={elevenLabs.voiceId} onChange={elevenLabs.setVoiceId} />
-        <GroupInfoPanel room={room} currentUserId={currentUserId} onlineUsers={onlineUsers} />
+        <GroupInfoPanel room={room} currentUserId={currentUserId} onlineUsers={onlineUsers} onStartDM={onStartDM} />
         {messages.length > 0 && (
           <Button
             variant="ghost"

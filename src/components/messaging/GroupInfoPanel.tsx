@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Users, Crown, Shield, UserPlus, UserMinus, ChevronUp, ChevronDown, X, Info } from "lucide-react";
+import { Users, Crown, Shield, UserPlus, UserMinus, ChevronUp, ChevronDown, X, Info, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,7 @@ interface GroupInfoPanelProps {
   room: ChatRoom;
   currentUserId: string;
   onlineUsers: Set<string>;
+  onStartDM?: (userId: string) => void;
 }
 
 interface MemberWithProfile {
@@ -36,7 +37,7 @@ interface MemberWithProfile {
   profile: UserProfile | null;
 }
 
-export function GroupInfoPanel({ room, currentUserId, onlineUsers }: GroupInfoPanelProps) {
+export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: GroupInfoPanelProps) {
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -229,7 +230,13 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers }: GroupInfoPa
                     return (
                       <div
                         key={member.id}
-                        className="flex items-start gap-2.5 px-2 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group"
+                        className={`flex items-start gap-2.5 px-2 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group ${!isCurrentUser && onStartDM ? "cursor-pointer" : ""}`}
+                        onClick={() => {
+                          if (!isCurrentUser && onStartDM) {
+                            onStartDM(member.user_id);
+                            setOpen(false);
+                          }
+                        }}
                       >
                         {/* Avatar */}
                         <div className="relative shrink-0">
@@ -266,27 +273,40 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers }: GroupInfoPa
                           )}
                         </div>
 
-                        {/* Admin actions */}
-                        {isAdmin && !isCurrentUser && (
+                        {/* Actions */}
+                        {!isCurrentUser && (
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                            <button
-                              onClick={() => toggleRole({ member, profile })}
-                              className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                              title={isAdminMember ? "Remove admin" : "Make admin"}
-                            >
-                              {isAdminMember ? (
-                                <ChevronDown className="w-3.5 h-3.5" />
-                              ) : (
-                                <Crown className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => setRemoveTarget({ member, profile })}
-                              className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                              title="Remove from group"
-                            >
-                              <UserMinus className="w-3.5 h-3.5" />
-                            </button>
+                            {onStartDM && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onStartDM(member.user_id); setOpen(false); }}
+                                className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                                title="Send message"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {isAdmin && (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleRole({ member, profile }); }}
+                                  className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                                  title={isAdminMember ? "Remove admin" : "Make admin"}
+                                >
+                                  {isAdminMember ? (
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <Crown className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setRemoveTarget({ member, profile }); }}
+                                  className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                  title="Remove from group"
+                                >
+                                  <UserMinus className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>

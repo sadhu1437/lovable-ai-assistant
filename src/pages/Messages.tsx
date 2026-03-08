@@ -241,6 +241,16 @@ export default function Messages() {
           allRooms={rooms}
           roomProfiles={roomProfiles}
           onDeleteMessage={(msgId) => setMessages((prev) => prev.filter((m) => m.id !== msgId))}
+          onStartDM={async (userId) => {
+            const { createDM } = await import("@/lib/messaging");
+            const roomId = await createDM(user.id, userId);
+            if (roomId) {
+              await loadRooms();
+              setActiveRoomId(roomId);
+            } else {
+              toast.error("Failed to start conversation");
+            }
+          }}
         />
       ) : (
         <div className="flex-1 hidden md:flex items-center justify-center bg-background">
