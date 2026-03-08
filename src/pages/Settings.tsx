@@ -237,6 +237,7 @@ export default function Settings() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bio, setBio] = useState("");
   const [gender, setGender] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [defaultModel, setDefaultModel] = useState(() =>
     localStorage.getItem("nexus-default-model") || "google/gemini-3-flash-preview"
   );
@@ -268,6 +269,7 @@ export default function Settings() {
           setUsername((data as any).username || "");
           setBio((data as any).bio || "");
           setGender((data as any).gender || "");
+          setStatusMessage((data as any).status_message || "");
         }
         setLoading(false);
       });
@@ -278,7 +280,7 @@ export default function Settings() {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null, bio: bio || null, gender: gender || null } as any)
+      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null, bio: bio || null, gender: gender || null, status_message: statusMessage || null } as any)
       .eq("user_id", user.id);
     setSaving(false);
     if (error) {
@@ -458,6 +460,18 @@ export default function Settings() {
                       <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="statusMessage" className="font-mono text-xs">Status Message</Label>
+                  <Input
+                    id="statusMessage"
+                    value={statusMessage}
+                    onChange={(e) => setStatusMessage(e.target.value)}
+                    placeholder="e.g. In a meeting, Available, On vacation..."
+                    className="font-mono text-sm"
+                    maxLength={80}
+                  />
+                  <p className="text-[10px] text-muted-foreground">{statusMessage.length}/80 characters</p>
                 </div>
                 <Button onClick={saveProfile} disabled={saving} className="gap-2 font-mono text-xs">
                   <Save className="w-3.5 h-3.5" />
