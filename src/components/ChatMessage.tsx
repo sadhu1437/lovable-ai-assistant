@@ -43,6 +43,41 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const canEdit = () => {
+    if (!message.timestamp) return false;
+    const ageMs = Date.now() - message.timestamp.getTime();
+    return ageMs < 24 * 60 * 60 * 1000; // 24 hours
+  };
+
+  const startEdit = () => {
+    setEditText(message.content);
+    setIsEditing(true);
+    setTimeout(() => editInputRef.current?.focus(), 50);
+  };
+
+  const saveEdit = () => {
+    const trimmed = editText.trim();
+    if (!trimmed || trimmed === message.content) { setIsEditing(false); return; }
+    onEditMessage?.(message.id, trimmed);
+    setIsEditing(false);
+  };
+
+  const runCode = (code: string, blockId: string, language: string) => {
+    try {
+      if (language === "javascript" || language === "js" || language === "typescript" || language === "ts") {
+        const logs: string[] = [];
+        const fakeConsole = { log: (...args: any[]) => logs.push(args.map(String).join(" ")), error: (...args: any[]) => logs.push("Error: " + args.map(String).join(" ")) };
+        const fn = new Function("console", code);
+        fn(fakeConsole);
+        setCodeOutput((prev) => ({ ...prev, [blockId]: logs.join("\n") || "(no output)" }));
+      } else {
+        setCodeOutput((prev) => ({ ...prev, [blockId]: `⚠️ Only JavaScript/TypeScript execution is supported` }));
+      }
+    } catch (err: any) {
+      setCodeOutput((prev) => ({ ...prev, [blockId]: `Error: ${err.message}` }));
+    }
+  };
+
   return (
     <div className={`animate-fade-in py-8 ${isUser ? "" : ""}`}>
       <div className="max-w-3xl mx-auto px-6 flex gap-5">
