@@ -345,6 +345,16 @@ export default function Messages() {
           setActiveRoomId(roomId);
         }}
       />
+
+      <CallHistory
+        currentUserId={user.id}
+        open={showCallHistory}
+        onClose={() => setShowCallHistory(false)}
+        onJumpToRoom={(roomId) => {
+          handleSelectRoom(roomId);
+          setShowCallHistory(false);
+        }}
+      />
     </div>
   );
 }
