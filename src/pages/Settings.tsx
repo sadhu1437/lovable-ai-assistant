@@ -75,9 +75,13 @@ function CacheStatsPanel() {
     const saved = localStorage.getItem("nexus-cache-ttl-data");
     return saved ? Number(saved) : dataCache.stats.defaultTTL;
   });
+  const [audioMaxBytes, setAudioMaxBytes] = useState(() => audioCache.stats.maxBytes);
+  const [dataMaxBytes, setDataMaxBytes] = useState(() => dataCache.stats.maxBytes);
 
   const refresh = () => {
     setStats(getAllCacheStats());
+    setAudioMaxBytes(audioCache.stats.maxBytes);
+    setDataMaxBytes(dataCache.stats.maxBytes);
     getPersistedStats().then(setDiskStats).catch(() => {});
   };
 
