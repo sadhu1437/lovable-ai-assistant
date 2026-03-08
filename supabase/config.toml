@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.code-generate]
 verify_jwt = false
+
+[functions.chat-bot-reply]
+verify_jwt = false
