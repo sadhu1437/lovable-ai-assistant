@@ -90,6 +90,14 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typingUsers.size]);
+  // Build a userId→profile lookup once
+  const profileByUserId = useMemo(() => {
+    const map: Record<string, UserProfile> = {};
+    for (const p of Object.values(profiles)) {
+      map[p.user_id] = p;
+    }
+    return map;
+  }, [profiles]);
 
   // Build mention candidates from room members
   const mentionCandidates = useMemo(() => {
@@ -235,14 +243,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     e.target.value = "";
   };
 
-  // Build a userId→profile lookup once
-  const profileByUserId = useCallback(() => {
-    const map: Record<string, UserProfile> = {};
-    for (const p of Object.values(profiles)) {
-      map[p.user_id] = p;
-    }
-    return map;
-  }, [profiles])();
+  // profileByUserId is now defined above (before mention candidates)
 
   const getDisplayName = useCallback((userId: string) => {
     const p = profileByUserId[userId];
