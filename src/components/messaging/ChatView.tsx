@@ -190,12 +190,31 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           </div>
           {room.type === "dm" && <OnlineIndicator isOnline={isOtherOnline} />}
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="text-sm font-semibold text-foreground font-mono">{roomName}</h3>
           <p className={`text-[10px] font-mono ${isOtherOnline || room.type === "group" ? "text-primary" : "text-muted-foreground"}`}>
             {getStatusText()}
           </p>
         </div>
+        {messages.length > 0 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            title="Export conversation as PDF"
+            onClick={() => exportMessagesToPdf(
+              messages.filter(m => m.message_type === "text" && m.content).map(m => ({
+                content: m.content || "",
+                sender: getDisplayName(m.sender_id),
+                timestamp: format(new Date(m.created_at), "HH:mm"),
+                role: m.sender_id === currentUserId ? "user" as const : "assistant" as const,
+              })),
+              roomName
+            )}
+          >
+            <FileDown className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
