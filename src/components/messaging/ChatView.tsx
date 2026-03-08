@@ -124,6 +124,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
       const onlineCount = Array.from(onlineUsers).length;
       return `${onlineCount} online`;
     }
+    if (isBot) return "AI Assistant • Always Online";
     if (isOtherOnline) return "Online";
     return "Offline";
   };
