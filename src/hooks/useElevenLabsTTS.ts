@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 
 export const ELEVENLABS_VOICES = [
@@ -30,7 +30,7 @@ function cleanText(text: string): string {
     .trim();
 }
 
-async function fetchTTSAudio(text: string, voiceId: string): Promise<Blob> {
+async function fetchTTSAudio(text: string, voiceId: string, signal?: AbortSignal): Promise<Blob> {
   const response = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
     {
@@ -41,6 +41,7 @@ async function fetchTTSAudio(text: string, voiceId: string): Promise<Blob> {
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ text, voiceId }),
+      signal,
     }
   );
   if (!response.ok) throw new Error("TTS request failed");
@@ -53,8 +54,11 @@ export function useElevenLabsTTS() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlRef = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const stop = useCallback(() => {
+  const cleanup = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     audioRef.current?.pause();
     audioRef.current = null;
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -62,38 +66,54 @@ export function useElevenLabsTTS() {
     setPlayingId(null);
   }, []);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      audioRef.current?.pause();
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    };
+  }, []);
+
   const play = useCallback(async (text: string, msgId: string) => {
-    if (playingId === msgId) { stop(); return; }
-    stop();
+    if (playingId === msgId) { cleanup(); return; }
+    cleanup();
 
     const clean = cleanText(text);
     if (!clean) { toast.error("Nothing to convert"); return; }
 
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoadingId(msgId);
     try {
-      const blob = await fetchTTSAudio(clean, voiceId);
+      const blob = await fetchTTSAudio(clean, voiceId, controller.signal);
+      if (controller.signal.aborted) return;
       const url = URL.createObjectURL(blob);
       urlRef.current = url;
       const audio = new Audio(url);
       audioRef.current = audio;
-      audio.onended = () => { stop(); };
-      audio.onerror = () => { stop(); toast.error("Audio playback failed"); };
+      audio.onended = () => { cleanup(); };
+      audio.onerror = () => { cleanup(); toast.error("Audio playback failed"); };
       setPlayingId(msgId);
       await audio.play();
-    } catch {
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
       toast.error("Failed to generate audio");
     } finally {
       setLoadingId(null);
     }
-  }, [voiceId, playingId, stop]);
+  }, [voiceId, playingId, cleanup]);
 
   const download = useCallback(async (text: string, msgId: string) => {
     const clean = cleanText(text);
     if (!clean) { toast.error("Nothing to convert"); return; }
 
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoadingId(msgId);
     try {
-      const blob = await fetchTTSAudio(clean, voiceId);
+      const blob = await fetchTTSAudio(clean, voiceId, controller.signal);
+      if (controller.signal.aborted) return;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -103,12 +123,13 @@ export function useElevenLabsTTS() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success("Audio downloaded!");
-    } catch {
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
       toast.error("Failed to generate audio");
     } finally {
       setLoadingId(null);
     }
   }, [voiceId]);
 
-  return { voiceId, setVoiceId, play, download, stop, loadingId, playingId };
+  return { voiceId, setVoiceId, play, download, stop: cleanup, loadingId, playingId };
 }

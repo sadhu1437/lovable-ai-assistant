@@ -12,8 +12,10 @@ export function usePresence(userId: string | undefined, roomId: string | null) {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const roomIdRef = useRef(roomId);
+  roomIdRef.current = roomId;
 
-  // Track presence
+  // Single presence channel — doesn't recreate on roomId change
   useEffect(() => {
     if (!userId) return;
 
@@ -29,12 +31,11 @@ export function usePresence(userId: string | undefined, roomId: string | null) {
         Object.values(state).forEach((presences) => {
           presences.forEach((p) => {
             online.add(p.user_id);
-            if (p.typing_in && p.typing_in === roomId) {
+            if (p.typing_in && p.typing_in === roomIdRef.current) {
               typing.add(p.user_id);
             }
           });
         });
-        // Remove self from typing
         typing.delete(userId);
         setOnlineUsers(online);
         setTypingUsers(typing);
@@ -59,7 +60,7 @@ export function usePresence(userId: string | undefined, roomId: string | null) {
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [userId, roomId]);
+  }, [userId]); // Only recreate on userId change, NOT roomId
 
   const setTyping = useCallback(
     (isTyping: boolean) => {
@@ -67,10 +68,10 @@ export function usePresence(userId: string | undefined, roomId: string | null) {
       channelRef.current.track({
         user_id: userId,
         online_at: new Date().toISOString(),
-        typing_in: isTyping ? roomId : null,
+        typing_in: isTyping ? roomIdRef.current : null,
       });
     },
-    [userId, roomId]
+    [userId]
   );
 
   return { onlineUsers, typingUsers, setTyping };
@@ -78,19 +79,24 @@ export function usePresence(userId: string | undefined, roomId: string | null) {
 
 export function useReadReceipts(roomId: string | null, userId: string | undefined, messages: { id: string; sender_id: string }[]) {
   const [readBy, setReadBy] = useState<Record<string, string[]>>({});
+  const lastMarkedRef = useRef<string>("");
 
-  // Mark messages as read
+  // Mark messages as read — deduplicated
   useEffect(() => {
     if (!roomId || !userId || messages.length === 0) return;
     const unreadFromOthers = messages.filter((m) => m.sender_id !== userId);
     if (unreadFromOthers.length === 0) return;
+
+    // Deduplicate: only mark if message IDs changed
+    const key = unreadFromOthers.map((m) => m.id).join(",");
+    if (key === lastMarkedRef.current) return;
+    lastMarkedRef.current = key;
 
     const markRead = async () => {
       const receipts = unreadFromOthers.map((m) => ({
         message_id: m.id,
         user_id: userId,
       }));
-      // Upsert - ignore conflicts
       await supabase.from("message_read_receipts").upsert(receipts, { onConflict: "message_id,user_id", ignoreDuplicates: true });
     };
     markRead();
