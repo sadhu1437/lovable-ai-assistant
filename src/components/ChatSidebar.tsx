@@ -60,10 +60,13 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
           <p className="text-xs text-muted-foreground text-center py-8 font-mono">No conversations yet</p>
         ) : (
           conversations.map((conv) => (
-            <button
+            <div
               key={conv.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onSelect(conv.id)}
-              className={`w-full group flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-sm mb-1 transition-all ${
+              onKeyDown={(e) => e.key === "Enter" && onSelect(conv.id)}
+              className={`w-full group flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-sm mb-1 transition-all cursor-pointer ${
                 activeId === conv.id
                   ? "bg-secondary text-foreground border border-primary/30"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -80,12 +83,15 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
                 >
                   {conv.pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
                 </button>
-                <Trash2
-                  className="w-3 h-3 hover:text-destructive transition-colors shrink-0"
+                <button
                   onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
-                />
+                  className="p-1 hover:text-destructive transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="w-3 h-3 shrink-0" />
+                </button>
               </div>
-            </button>
+            </div>
           ))
         )}
       </div>
