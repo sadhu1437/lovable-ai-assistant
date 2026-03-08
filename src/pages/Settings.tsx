@@ -29,6 +29,7 @@ export default function Settings() {
   const { theme, toggleTheme } = useTheme();
 
   const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [defaultModel, setDefaultModel] = useState(() =>
     localStorage.getItem("nexus-default-model") || "google/gemini-3-flash-preview"
@@ -51,13 +52,14 @@ export default function Settings() {
     }
     supabase
       .from("profiles")
-      .select("display_name, avatar_url")
+      .select("display_name, avatar_url, username")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
           setDisplayName(data.display_name || "");
           setAvatarUrl(data.avatar_url || "");
+          setUsername((data as any).username || "");
         }
         setLoading(false);
       });
@@ -68,7 +70,7 @@ export default function Settings() {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, avatar_url: avatarUrl })
+      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null } as any)
       .eq("user_id", user.id);
     setSaving(false);
     if (error) {
@@ -197,6 +199,17 @@ export default function Settings() {
                     placeholder="Your name"
                     className="font-mono text-sm"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username" className="font-mono text-xs">Username</Label>
+                  <Input
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                    placeholder="your_username"
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Others can find you by this username in Messages.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="avatarUrl" className="font-mono text-xs">Avatar URL</Label>
