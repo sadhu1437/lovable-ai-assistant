@@ -377,6 +377,8 @@ const Index = () => {
       normalizedName.endsWith(".xlsx") ||
       normalizedName.endsWith(".ppt") ||
       normalizedName.endsWith(".pptx");
+    let fileContent: string;
+    let dataUrl: string | undefined;
 
     try {
       if (isImage || isBinary) {
