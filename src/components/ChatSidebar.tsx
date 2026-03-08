@@ -109,6 +109,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
         {user && (
           <button
             onClick={() => navigate("/messages")}
+            onMouseEnter={() => prefetchRoute("/messages")}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-sm text-foreground transition-all"
           >
             <MessageCircle className="w-4 h-4" />
