@@ -1,11 +1,171 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useRef, useEffect, useCallback } from "react";
+import { ChatSidebar } from "@/components/ChatSidebar";
+import { ChatMessage } from "@/components/ChatMessage";
+import { ChatInput } from "@/components/ChatInput";
+import { TypingIndicator } from "@/components/TypingIndicator";
+import { WelcomeScreen } from "@/components/WelcomeScreen";
+import { streamChat, generateId } from "@/lib/chat";
+import type { Message, Conversation } from "@/lib/chat";
+import { Menu, X } from "lucide-react";
+import { toast } from "sonner";
 
 const Index = () => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [category, setCategory] = useState("general");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const activeConv = conversations.find((c) => c.id === activeId) || null;
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [activeConv?.messages.length, scrollToBottom]);
+
+  const createConversation = (firstMessage?: string): string => {
+    const id = generateId();
+    const conv: Conversation = {
+      id,
+      title: firstMessage?.slice(0, 40) || "New Chat",
+      messages: [],
+      category,
+      createdAt: new Date(),
+    };
+    setConversations((prev) => [conv, ...prev]);
+    setActiveId(id);
+    return id;
+  };
+
+  const sendMessage = async (content: string) => {
+    let convId = activeId;
+    if (!convId) {
+      convId = createConversation(content);
+    }
+
+    const userMsg: Message = {
+      id: generateId(),
+      role: "user",
+      content,
+      timestamp: new Date(),
+    };
+
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === convId
+          ? { ...c, messages: [...c.messages, userMsg], title: c.messages.length === 0 ? content.slice(0, 40) : c.title }
+          : c
+      )
+    );
+
+    setIsLoading(true);
+    let assistantContent = "";
+    const assistantId = generateId();
+
+    const allMessages = [
+      ...(conversations.find((c) => c.id === convId)?.messages || []).map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      { role: "user" as const, content },
+    ];
+
+    await streamChat({
+      messages: allMessages,
+      category,
+      onDelta: (delta) => {
+        assistantContent += delta;
+        const currentContent = assistantContent;
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== convId) return c;
+            const msgs = c.messages.filter((m) => m.id !== assistantId);
+            return {
+              ...c,
+              messages: [
+                ...msgs,
+                { id: assistantId, role: "assistant", content: currentContent, timestamp: new Date() },
+              ],
+            };
+          })
+        );
+      },
+      onDone: () => setIsLoading(false),
+      onError: (err) => {
+        setIsLoading(false);
+        toast.error(err);
+      },
+    });
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="h-screen flex bg-background overflow-hidden">
+      {/* Mobile toggle */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="fixed top-3 left-3 z-50 md:hidden w-9 h-9 rounded-lg bg-card border border-border flex items-center justify-center text-foreground"
+      >
+        {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+      </button>
+
+      {/* Sidebar */}
+      <div className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 fixed md:relative z-40 h-full transition-transform duration-200`}>
+        <ChatSidebar
+          conversations={conversations}
+          activeId={activeId}
+          onSelect={(id) => { setActiveId(id); setSidebarOpen(false); }}
+          onNew={() => { setActiveId(null); setSidebarOpen(false); }}
+          onDelete={(id) => {
+            setConversations((prev) => prev.filter((c) => c.id !== id));
+            if (activeId === id) setActiveId(null);
+          }}
+        />
+      </div>
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-background/60 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {!activeConv || activeConv.messages.length === 0 ? (
+          <>
+            <WelcomeScreen onPrompt={sendMessage} />
+            <ChatInput
+              onSend={sendMessage}
+              isLoading={isLoading}
+              category={category}
+              onCategoryChange={setCategory}
+            />
+          </>
+        ) : (
+          <>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto">
+              {activeConv.messages.map((msg) => (
+                <ChatMessage key={msg.id} message={msg} />
+              ))}
+              {isLoading && !activeConv.messages.some(m => m.role === "assistant" && m.id) && (
+                <TypingIndicator />
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            <ChatInput
+              onSend={sendMessage}
+              isLoading={isLoading}
+              category={category}
+              onCategoryChange={setCategory}
+            />
+          </>
+        )}
       </div>
     </div>
   );
