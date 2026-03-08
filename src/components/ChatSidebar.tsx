@@ -1,5 +1,7 @@
-import { Plus, MessageSquare, Trash2 } from "lucide-react";
+import { Plus, MessageSquare, Trash2, LogOut, LogIn } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { Conversation } from "@/lib/chat";
+import type { User } from "@supabase/supabase-js";
 
 interface ChatSidebarProps {
   conversations: Conversation[];
@@ -7,9 +9,13 @@ interface ChatSidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  user?: User | null;
+  onSignOut?: () => void;
 }
 
-export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, user, onSignOut }: ChatSidebarProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="w-64 h-full bg-card border-r border-border flex flex-col">
       {/* Header */}
@@ -55,6 +61,31 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
               />
             </button>
           ))
+        )}
+      </div>
+
+      {/* User section */}
+      <div className="p-3 border-t border-border">
+        {user ? (
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs font-mono text-secondary-foreground">
+              {(user.email || "U")[0].toUpperCase()}
+            </div>
+            <span className="flex-1 text-xs text-muted-foreground truncate">{user.email}</span>
+            {onSignOut && (
+              <button onClick={onSignOut} className="text-muted-foreground hover:text-destructive transition-colors" title="Sign out">
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate("/auth")}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary hover:bg-muted text-sm text-foreground transition-all"
+          >
+            <LogIn className="w-4 h-4" />
+            <span className="font-mono text-xs">Sign in to save chats</span>
+          </button>
         )}
       </div>
     </div>

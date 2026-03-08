@@ -8,18 +8,61 @@ import { streamChat, generateId } from "@/lib/chat";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  loadConversations,
+  loadMessages,
+  createConversation as dbCreateConversation,
+  saveMessage,
+  deleteConversation as dbDeleteConversation,
+} from "@/lib/db";
 
 const Index = () => {
+  const { user, signOut } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [category, setCategory] = useState("general");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [loadingConvs, setLoadingConvs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const conversationsRef = useRef(conversations);
   conversationsRef.current = conversations;
 
   const activeConv = conversations.find((c) => c.id === activeId) || null;
+
+  // Load conversations from DB when user is logged in
+  useEffect(() => {
+    if (!user) return;
+    setLoadingConvs(true);
+    loadConversations(user.id)
+      .then(setConversations)
+      .catch(() => toast.error("Failed to load conversations"))
+      .finally(() => setLoadingConvs(false));
+  }, [user]);
+
+  // Clear conversations when user logs out
+  useEffect(() => {
+    if (!user) {
+      setConversations([]);
+      setActiveId(null);
+    }
+  }, [user]);
+
+  // Load messages when active conversation changes (for DB-backed convos)
+  useEffect(() => {
+    if (!activeId || !user) return;
+    const conv = conversations.find((c) => c.id === activeId);
+    if (conv && conv.messages.length === 0) {
+      loadMessages(activeId).then((msgs) => {
+        if (msgs.length > 0) {
+          setConversations((prev) =>
+            prev.map((c) => (c.id === activeId ? { ...c, messages: msgs } : c))
+          );
+        }
+      });
+    }
+  }, [activeId, user]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,7 +77,17 @@ const Index = () => {
     const isNew = !convId;
 
     if (isNew) {
-      convId = generateId();
+      if (user) {
+        // Persist to DB
+        try {
+          convId = await dbCreateConversation(user.id, content.slice(0, 40), category);
+        } catch {
+          toast.error("Failed to create conversation");
+          return;
+        }
+      } else {
+        convId = generateId();
+      }
       const conv: Conversation = {
         id: convId,
         title: content.slice(0, 40),
@@ -52,6 +105,16 @@ const Index = () => {
       content,
       timestamp: new Date(),
     };
+
+    // Save user message to DB if logged in
+    if (user) {
+      try {
+        const dbId = await saveMessage(convId!, "user", content);
+        userMsg.id = dbId;
+      } catch {
+        // Continue with local-only
+      }
+    }
 
     setConversations((prev) =>
       prev.map((c) =>
@@ -100,8 +163,32 @@ const Index = () => {
           })
         );
       },
-      onDone: () => {
+      onDone: async () => {
         setIsLoading(false);
+        // Save assistant message to DB if logged in
+        if (user) {
+          const finalConv = conversationsRef.current.find((c) => c.id === convId);
+          const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
+          if (assistantMsg) {
+            try {
+              const dbId = await saveMessage(convId!, "assistant", assistantMsg.content);
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === convId
+                    ? {
+                        ...c,
+                        messages: c.messages.map((m) =>
+                          m.id === localAssistantId ? { ...m, id: dbId } : m
+                        ),
+                      }
+                    : c
+                )
+              );
+            } catch {
+              // Non-critical
+            }
+          }
+        }
       },
       onError: (err) => {
         setIsLoading(false);
@@ -110,9 +197,16 @@ const Index = () => {
     });
   };
 
-  const handleDeleteConversation = (id: string) => {
+  const handleDeleteConversation = async (id: string) => {
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeId === id) setActiveId(null);
+    if (user) {
+      try {
+        await dbDeleteConversation(id);
+      } catch {
+        toast.error("Failed to delete conversation");
+      }
+    }
   };
 
   return (
@@ -133,6 +227,8 @@ const Index = () => {
           onSelect={(id) => { setActiveId(id); setSidebarOpen(false); }}
           onNew={() => { setActiveId(null); setSidebarOpen(false); }}
           onDelete={handleDeleteConversation}
+          user={user}
+          onSignOut={signOut}
         />
       </div>
 
