@@ -15,9 +15,15 @@ interface ChatMessageProps {
   onCanvasEdit?: (editPrompt: string, existingCode: string) => void;
   isEditingImage?: boolean;
   isEditingCode?: boolean;
+  elevenLabs?: {
+    play: (text: string, msgId: string) => void;
+    download: (text: string, msgId: string) => void;
+    loadingId: string | null;
+    playingId: string | null;
+  };
 }
 
-export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage, isEditingCode }: ChatMessageProps) {
+export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage, isEditingCode, elevenLabs }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null);
