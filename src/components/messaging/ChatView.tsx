@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square, Pencil, Pin, PinOff, Check, X, MoreVertical, SmilePlus, Reply } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square, Pencil, Pin, PinOff, Check, X, MoreVertical, SmilePlus, Reply, Phone, Video } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -31,6 +31,8 @@ import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { useElevenLabsTTS } from "@/hooks/useElevenLabsTTS";
 import { VoiceSelector } from "./VoiceSelector";
 import { exportMessageAsPdf, exportMessagesToPdf } from "@/lib/exportPdf";
+import { useWebRTC, type CallType } from "@/hooks/useWebRTC";
+import { IncomingCallDialog, CallScreen } from "./CallComponents";
 import {
   AlertDialog,
   AlertDialogAction,
