@@ -14,6 +14,7 @@ import { VoiceRecorder } from "./VoiceRecorder";
 import { VoicePlayer } from "./VoicePlayer";
 import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
 import { ReplyPreview, QuotedMessage } from "./ReplyPreview";
+import { GroupInfoPanel } from "./GroupInfoPanel";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -287,6 +288,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           </p>
         </div>
         <VoiceSelector value={elevenLabs.voiceId} onChange={elevenLabs.setVoiceId} />
+        <GroupInfoPanel room={room} currentUserId={currentUserId} onlineUsers={onlineUsers} />
         {messages.length > 0 && (
           <Button
             variant="ghost"

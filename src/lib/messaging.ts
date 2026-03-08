@@ -39,12 +39,13 @@ export interface UserProfile {
   username: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  bio: string | null;
 }
 
 export async function searchUsers(query: string): Promise<UserProfile[]> {
   const { data } = await supabase
     .from("profiles")
-    .select("id, user_id, username, display_name, avatar_url")
+    .select("id, user_id, username, display_name, avatar_url, bio")
     .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
     .limit(10);
   return (data as UserProfile[]) || [];
@@ -57,7 +58,7 @@ export async function fetchProfileByUserId(userId: string): Promise<UserProfile 
     async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("id, user_id, username, display_name, avatar_url")
+        .select("id, user_id, username, display_name, avatar_url, bio")
         .eq("user_id", userId)
         .maybeSingle();
       return (data as UserProfile) || null;
@@ -83,7 +84,7 @@ export async function fetchProfilesByUserIds(userIds: string[]): Promise<UserPro
   if (uncachedIds.length > 0) {
     const { data } = await supabase
       .from("profiles")
-      .select("id, user_id, username, display_name, avatar_url")
+      .select("id, user_id, username, display_name, avatar_url, bio")
       .in("user_id", uncachedIds);
     if (data) {
       for (const p of data) {
