@@ -288,6 +288,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           </p>
         </div>
         <VoiceSelector value={elevenLabs.voiceId} onChange={elevenLabs.setVoiceId} />
+        <GroupInfoPanel room={room} currentUserId={currentUserId} onlineUsers={onlineUsers} />
         {messages.length > 0 && (
           <Button
             variant="ghost"
