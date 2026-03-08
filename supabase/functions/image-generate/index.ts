@@ -9,9 +9,18 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, sourceImage } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Build message content - text only or text + image for editing
+    let userContent: any = prompt;
+    if (sourceImage) {
+      userContent = [
+        { type: "text", text: prompt },
+        { type: "image_url", image_url: { url: sourceImage } },
+      ];
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -22,7 +31,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
         messages: [
-          { role: "user", content: prompt },
+          { role: "user", content: userContent },
         ],
         modalities: ["image", "text"],
       }),
