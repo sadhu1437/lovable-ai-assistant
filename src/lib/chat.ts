@@ -127,21 +127,26 @@ export function isImageRequest(text: string): boolean {
 
 export async function generateImage({
   prompt,
+  sourceImage,
   onResult,
   onError,
 }: {
   prompt: string;
+  sourceImage?: string;
   onResult: (text: string, images: string[]) => void;
   onError: (error: string) => void;
 }) {
   try {
+    const body: any = { prompt };
+    if (sourceImage) body.sourceImage = sourceImage;
+
     const resp = await fetch(IMAGE_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify(body),
     });
 
     if (!resp.ok) {

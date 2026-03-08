@@ -26,6 +26,7 @@ const Index = () => {
   const [category, setCategory] = useState("general");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showGallery, setShowGallery] = useState(false);
+  const [isEditingImage, setIsEditingImage] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const conversationsRef = useRef(conversations);
@@ -249,6 +250,53 @@ const Index = () => {
     }
   };
 
+  const handleEditImage = async (sourceImage: string, editPrompt: string) => {
+    if (!activeId) return;
+    const convId = activeId;
+
+    const userMsg: Message = {
+      id: generateId(),
+      role: "user",
+      content: `✏️ Edit image: ${editPrompt}`,
+      timestamp: new Date(),
+    };
+    setConversations((prev) =>
+      prev.map((c) => c.id === convId ? { ...c, messages: [...c.messages, userMsg] } : c)
+    );
+
+    setIsEditingImage(true);
+    const localAssistantId = generateId();
+
+    await generateImage({
+      prompt: editPrompt,
+      sourceImage,
+      onResult: async (text, images) => {
+        const assistantMsg: Message = {
+          id: localAssistantId,
+          role: "assistant",
+          content: text || "Here's your edited image:",
+          images,
+          timestamp: new Date(),
+        };
+        setConversations((prev) =>
+          prev.map((c) => c.id === convId ? { ...c, messages: [...c.messages, assistantMsg] } : c)
+        );
+        setIsEditingImage(false);
+
+        if (user) {
+          try {
+            await saveMessage(convId, "user", userMsg.content);
+            await saveMessage(convId, "assistant", text);
+          } catch { /* non-critical */ }
+        }
+      },
+      onError: (err) => {
+        setIsEditingImage(false);
+        toast.error(err);
+      },
+    });
+  };
+
   return (
     <div className="h-screen flex bg-background overflow-hidden">
       {/* Mobile toggle */}
@@ -295,7 +343,12 @@ const Index = () => {
           <>
             <div className="flex-1 overflow-y-auto">
               {activeConv.messages.map((msg) => (
-                <ChatMessage key={msg.id} message={msg} />
+                <ChatMessage
+                  key={msg.id}
+                  message={msg}
+                  onEditImage={handleEditImage}
+                  isEditingImage={isEditingImage}
+                />
               ))}
               {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && <TypingIndicator />}
               <div ref={messagesEndRef} />
