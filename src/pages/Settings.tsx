@@ -445,6 +445,21 @@ export default function Settings() {
                   />
                   <p className="text-[10px] text-muted-foreground">{bio.length}/200 characters</p>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender" className="font-mono text-xs">Gender</Label>
+                  <Select value={gender} onValueChange={setGender}>
+                    <SelectTrigger className="font-mono text-sm">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="non-binary">Non-binary</SelectItem>
+                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                </div>
                 <Button onClick={saveProfile} disabled={saving} className="gap-2 font-mono text-xs">
                   <Save className="w-3.5 h-3.5" />
                   {saving ? "Saving…" : "Save Profile"}
