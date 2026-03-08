@@ -1,0 +1,1 @@
+UPDATE public.profiles SET username = 'nexusai-bot' WHERE display_name = 'NexusAI Bot' AND username IS NULL;
