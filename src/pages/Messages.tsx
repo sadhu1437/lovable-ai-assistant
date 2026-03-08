@@ -18,6 +18,7 @@ import {
   fetchProfileByUserId,
   createBotDM,
   deleteChatRoom,
+  BOT_USERNAME,
   type ChatRoom,
   type ChatMessage,
   type UserProfile,
@@ -58,11 +59,12 @@ export default function Messages() {
     if (!allMembers) { setLoading(false); return; }
 
     const otherUserIds = new Set<string>();
-    const roomToOtherUser: Record<string, string> = {};
+    const roomToOtherUsers: Record<string, string[]> = {};
     for (const member of allMembers) {
       if (member.user_id !== user.id) {
         otherUserIds.add(member.user_id);
-        roomToOtherUser[member.room_id] = member.user_id;
+        if (!roomToOtherUsers[member.room_id]) roomToOtherUsers[member.room_id] = [];
+        roomToOtherUsers[member.room_id].push(member.user_id);
       }
     }
 
@@ -76,7 +78,10 @@ export default function Messages() {
     for (const p of profilesList) {
       profileByUserId[p.user_id] = p;
     }
-    for (const [roomId, userId] of Object.entries(roomToOtherUser)) {
+    for (const [roomId, userIds] of Object.entries(roomToOtherUsers)) {
+      // Prefer non-bot user for DM display
+      const nonBotUser = userIds.find(uid => profileByUserId[uid]?.username !== BOT_USERNAME);
+      const userId = nonBotUser || userIds[0];
       if (profileByUserId[userId]) {
         profileMap[roomId] = profileByUserId[userId];
       }

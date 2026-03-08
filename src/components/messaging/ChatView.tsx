@@ -158,9 +158,11 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   }, []);
 
   const isBotRoom = useCallback(() => {
+    // Only true for DM rooms where the other user IS the bot
+    if (room.type !== "dm") return false;
     const roomProfile = roomProfiles[room.id];
     return roomProfile?.username === BOT_USERNAME;
-  }, [roomProfiles, room.id]);
+  }, [roomProfiles, room.id, room.type]);
 
   const handleReply = useCallback((msg: ChatMessage) => {
     setReplyTo(msg);
@@ -180,11 +182,11 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     if (error) { toast.error("Failed to send message"); setSending(false); return; }
     setSending(false);
 
-    const mentionsBot = /(?:^|\s)@nexusai\b/i.test(trimmed);
+    const mentionsBot = /(?:^|\s)@nexusai(?:-bot)?\b/i.test(trimmed);
     const botRoom = isBotRoom();
     if (botRoom || mentionsBot) {
       setBotThinking(true);
-      const cleanPrompt = botRoom ? trimmed : trimmed.replace(/@nexusai/gi, "").trim();
+      const cleanPrompt = botRoom ? trimmed : trimmed.replace(/@nexusai(?:-bot)?/gi, "").trim();
       if (cleanPrompt) {
         const { error: botErr } = await triggerBotReply(room.id, cleanPrompt);
         if (botErr) toast.error("Bot failed to reply");
