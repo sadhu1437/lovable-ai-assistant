@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Loader2, Mic, MicOff, ChevronDown } from "lucide-react";
+import { Send, Loader2, Mic, MicOff, ChevronDown, Paperclip, X, FileText, Image as ImageIcon } from "lucide-react";
 import { categories, aiModels } from "@/lib/chat";
 import { toast } from "sonner";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onFileUpload?: (file: File, prompt?: string) => void;
   isLoading: boolean;
   category: string;
   onCategoryChange: (cat: string) => void;
@@ -12,11 +13,14 @@ interface ChatInputProps {
   onModelChange: (model: string) => void;
 }
 
-export function ChatInput({ onSend, isLoading, category, onCategoryChange, model, onModelChange }: ChatInputProps) {
+export function ChatInput({ onSend, onFileUpload, isLoading, category, onCategoryChange, model, onModelChange }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -39,9 +43,39 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange, model
   }, []);
 
   const handleSubmit = () => {
+    if (selectedFile && onFileUpload) {
+      onFileUpload(selectedFile, input.trim() || undefined);
+      setSelectedFile(null);
+      setFilePreviewUrl(null);
+      setInput("");
+      return;
+    }
     if (!input.trim() || isLoading) return;
     onSend(input.trim());
     setInput("");
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("File too large. Max 20MB.");
+      return;
+    }
+    setSelectedFile(file);
+    if (file.type.startsWith("image/")) {
+      const url = URL.createObjectURL(file);
+      setFilePreviewUrl(url);
+    } else {
+      setFilePreviewUrl(null);
+    }
+  };
+
+  const clearFile = () => {
+    setSelectedFile(null);
+    if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+    setFilePreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
