@@ -328,6 +328,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                     )}
                     {msg.message_type === "text" && msg.content && (
                       <button
+                        onClick={() => handleDownloadAudio(msg.content || "", msg.id)}
+                        disabled={downloadingAudio === msg.id}
+                        className={`p-1 rounded transition-colors ${downloadingAudio === msg.id ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                        title="Download as audio"
+                      >
+                        {downloadingAudio === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                      </button>
+                    {msg.message_type === "text" && msg.content && (
+                      <button
                         onClick={() => exportMessageAsPdf({
                           content: msg.content || "",
                           sender: getDisplayName(msg.sender_id),
