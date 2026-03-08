@@ -17,6 +17,7 @@ import {
   fetchProfilesByUserIds,
   fetchProfileByUserId,
   createBotDM,
+  deleteChatRoom,
   type ChatRoom,
   type ChatMessage,
   type UserProfile,
@@ -209,6 +210,16 @@ export default function Messages() {
               toast.error("Failed to start bot chat");
             }
             setBotLoading(false);
+          }}
+          onDeleteRoom={async (roomId) => {
+            const { success, error } = await deleteChatRoom(roomId);
+            if (error || !success) {
+              toast.error("Failed to delete conversation");
+            } else {
+              toast.success("Conversation deleted");
+              if (activeRoomId === roomId) setActiveRoomId(null);
+              setRooms((prev) => prev.filter((r) => r.id !== roomId));
+            }
           }}
           roomProfiles={roomProfiles}
           currentUserId={user.id}

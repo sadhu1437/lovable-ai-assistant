@@ -1,9 +1,19 @@
-import { useState } from "react";
-import { Search, Users, MessageCircle, Bot } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Search, Users, MessageCircle, Bot, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OnlineIndicator } from "./OnlineIndicator";
 import type { ChatRoom, UserProfile } from "@/lib/messaging";
 import { BOT_USERNAME } from "@/lib/messaging";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface RoomListProps {
   rooms: ChatRoom[];
@@ -12,13 +22,17 @@ interface RoomListProps {
   onNewDM: () => void;
   onNewGroup: () => void;
   onChatWithBot: () => void;
+  onDeleteRoom?: (roomId: string) => void;
   roomProfiles: Record<string, UserProfile>;
   currentUserId: string;
   onlineUsers: Set<string>;
 }
 
-export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, onChatWithBot, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
+export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, onChatWithBot, onDeleteRoom, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
   const [search, setSearch] = useState("");
+  const [deleteRoom, setDeleteRoom] = useState<ChatRoom | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggered = useRef(false);
 
   const filtered = rooms.filter((r) => {
     const name = r.type === "group" ? r.name : roomProfiles[r.id]?.display_name || roomProfiles[r.id]?.username;
@@ -47,6 +61,27 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
     if (room.type !== "dm") return false;
     return roomProfiles[room.id]?.username === BOT_USERNAME;
   };
+
+  const startLongPress = useCallback((room: ChatRoom) => {
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      setDeleteRoom(room);
+    }, 600);
+  }, []);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleClick = useCallback((roomId: string) => {
+    if (!longPressTriggered.current) {
+      onSelectRoom(roomId);
+    }
+  }, [onSelectRoom]);
 
   return (
     <div className="w-72 h-full bg-card border-r border-border flex flex-col">
@@ -96,8 +131,17 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
             return (
               <button
                 key={room.id}
-                onClick={() => onSelectRoom(room.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left text-sm mb-1 transition-all ${
+                onClick={() => handleClick(room.id)}
+                onMouseDown={() => startLongPress(room)}
+                onMouseUp={cancelLongPress}
+                onMouseLeave={cancelLongPress}
+                onTouchStart={() => startLongPress(room)}
+                onTouchEnd={cancelLongPress}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setDeleteRoom(room);
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left text-sm mb-1 transition-all select-none ${
                   activeRoomId === room.id
                     ? "bg-secondary text-foreground border border-primary/30"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -128,6 +172,35 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
           })
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteRoom} onOpenChange={(o) => !o && setDeleteRoom(null)}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-mono text-sm flex items-center gap-2">
+              <Trash2 className="w-4 h-4 text-destructive" />
+              Delete Conversation
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              This will permanently delete the entire conversation including all messages for both sides. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-mono text-xs">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-mono text-xs"
+              onClick={() => {
+                if (deleteRoom && onDeleteRoom) {
+                  onDeleteRoom(deleteRoom.id);
+                }
+                setDeleteRoom(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
