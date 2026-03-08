@@ -83,9 +83,9 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
   // WebRTC calling
   const webrtc = useWebRTC({ currentUserId });
-  const [incomingCall, setIncomingCall] = useState<{ id: string; callerId: string; callType: CallType } | null>(null);
+  const [incomingCall, setIncomingCall] = useState<{ id: string; callerId: string; callType: CallType; isGroupCall?: boolean } | null>(null);
 
-  // Listen for incoming calls
+  // Listen for incoming calls (1:1 and group)
   useEffect(() => {
     if (!currentUserId) return;
     const channel = supabase
@@ -95,8 +95,8 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
         { event: "INSERT", schema: "public", table: "calls", filter: `callee_id=eq.${currentUserId}` },
         (payload) => {
           const call = payload.new as any;
-          if (call.status === "ringing") {
-            setIncomingCall({ id: call.id, callerId: call.caller_id, callType: call.call_type });
+          if (call.status === "ringing" && !call.is_group_call) {
+            setIncomingCall({ id: call.id, callerId: call.caller_id, callType: call.call_type, isGroupCall: false });
           }
         }
       )
@@ -111,10 +111,37 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
         }
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [currentUserId, incomingCall?.id]);
+
+    // Listen for group calls on the current room
+    const groupChannel = supabase
+      .channel(`group-call-invite-${room.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "calls", filter: `room_id=eq.${room.id}` },
+        (payload) => {
+          const call = payload.new as any;
+          if (call.is_group_call && call.caller_id !== currentUserId && call.status === "ringing") {
+            setIncomingCall({ id: call.id, callerId: call.caller_id, callType: call.call_type, isGroupCall: true });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(groupChannel);
+    };
+  }, [currentUserId, incomingCall?.id, room.id]);
 
   const handleStartCall = async (type: CallType) => {
+    if (room.type === "group") {
+      try {
+        await webrtc.startGroupCall(room.id, type);
+      } catch {
+        toast.error("Failed to start group call. Check microphone/camera permissions.");
+      }
+      return;
+    }
     const targetId = callTargetUserId || otherUserId;
     if (!targetId || isBot) return;
     try {
@@ -127,7 +154,11 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const handleAcceptCall = async () => {
     if (!incomingCall) return;
     try {
-      await webrtc.answerCall(incomingCall.id, incomingCall.callType);
+      if (incomingCall.isGroupCall) {
+        await webrtc.joinGroupCall(incomingCall.id, incomingCall.callType);
+      } else {
+        await webrtc.answerCall(incomingCall.id, incomingCall.callType);
+      }
       setIncomingCall(null);
     } catch {
       toast.error("Failed to answer call");
@@ -440,8 +471,8 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             {getStatusText()}
           </p>
         </div>
-        {/* Call buttons (DM only, not bot) */}
-        {room.type === "dm" && !isBot && (callTargetUserId || otherUserId) && (
+        {/* Call buttons — DM (non-bot) OR group chats */}
+        {((room.type === "dm" && !isBot && (callTargetUserId || otherUserId)) || room.type === "group") && (
           <>
             <Button
               variant="ghost"

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useNotificationContext } from "@/hooks/useNotificationContext";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { MessageSearch } from "@/components/messaging/MessageSearch";
 import { ChatView } from "@/components/messaging/ChatView";
 import { NewChatDialog } from "@/components/messaging/NewChatDialog";
 import { usePresence, useReadReceipts } from "@/hooks/usePresence";
+import { CallHistory } from "@/components/messaging/CallHistory";
 import {
   fetchUserRooms,
   fetchRoomMessages,
@@ -38,6 +39,7 @@ export default function Messages() {
   const [dialogMode, setDialogMode] = useState<"dm" | "group" | null>(null);
   const [loading, setLoading] = useState(true);
   const [botLoading, setBotLoading] = useState(false);
+  const [showCallHistory, setShowCallHistory] = useState(false);
   const profilesRef = useRef(profiles);
   profilesRef.current = profiles;
 
@@ -260,6 +262,9 @@ export default function Messages() {
             roomProfiles={roomProfiles}
             onJumpToMessage={(roomId) => setActiveRoomId(roomId)}
           />
+          <Button variant="ghost" size="icon" onClick={() => setShowCallHistory(true)} title="Call History">
+            <Clock className="w-4 h-4" />
+          </Button>
         </div>
         <RoomList
           rooms={rooms}
@@ -338,6 +343,16 @@ export default function Messages() {
         onCreated={(roomId) => {
           loadRooms();
           setActiveRoomId(roomId);
+        }}
+      />
+
+      <CallHistory
+        currentUserId={user.id}
+        open={showCallHistory}
+        onClose={() => setShowCallHistory(false)}
+        onJumpToRoom={(roomId) => {
+          handleSelectRoom(roomId);
+          setShowCallHistory(false);
         }}
       />
     </div>
