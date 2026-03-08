@@ -109,7 +109,38 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                   </div>
                 </div>
               )}
-              <p className="text-foreground leading-7 text-[15px]">{message.content}</p>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <textarea
+                    ref={editInputRef}
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); } if (e.key === "Escape") setIsEditing(false); }}
+                    className="w-full px-3 py-2 rounded-lg bg-card border border-border text-foreground text-sm font-mono outline-none focus:border-primary/50 resize-none"
+                    rows={3}
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={saveEdit} className="px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-mono">Save</button>
+                    <button onClick={() => setIsEditing(false)} className="px-3 py-1 rounded-lg bg-secondary text-foreground text-xs font-mono">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="group/user relative">
+                  <p className="text-foreground leading-7 text-[15px]">{message.content}</p>
+                  {message.editedAt && (
+                    <span className="text-[10px] text-muted-foreground italic ml-1">(edited)</span>
+                  )}
+                  {canEdit() && onEditMessage && (
+                    <button
+                      onClick={startEdit}
+                      className="absolute -top-1 -right-8 p-1 rounded opacity-0 group-hover/user:opacity-100 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                      title="Edit message"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <>
