@@ -413,7 +413,7 @@ const Index = () => {
 
     await analyzeFile({
       fileName: file.name,
-      fileType: file.type,
+      fileType,
       fileContent,
       userPrompt: prompt,
       onDelta: (delta) => {
