@@ -262,6 +262,9 @@ export default function Messages() {
             roomProfiles={roomProfiles}
             onJumpToMessage={(roomId) => setActiveRoomId(roomId)}
           />
+          <Button variant="ghost" size="icon" onClick={() => setShowCallHistory(true)} title="Call History">
+            <Clock className="w-4 h-4" />
+          </Button>
         </div>
         <RoomList
           rooms={rooms}
