@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2 } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -16,6 +16,8 @@ import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
 import { useReactions } from "@/hooks/useReactions";
 import { ForwardMessageDialog } from "./ForwardMessageDialog";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { useElevenLabsTTS } from "@/hooks/useElevenLabsTTS";
+import { VoiceSelector } from "./VoiceSelector";
 import { exportMessageAsPdf, exportMessagesToPdf } from "@/lib/exportPdf";
 import {
   AlertDialog,
@@ -55,54 +57,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
   const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
   const { speaking, speak } = useTextToSpeech();
-  const [downloadingAudio, setDownloadingAudio] = useState<string | null>(null);
-
-  const handleDownloadAudio = async (text: string, msgId: string) => {
-    if (downloadingAudio) return;
-    setDownloadingAudio(msgId);
-    try {
-      const clean = text
-        .replace(/```[\s\S]*?```/g, "")
-        .replace(/`([^`]+)`/g, "$1")
-        .replace(/#{1,6}\s/g, "")
-        .replace(/\*\*([^*]+)\*\*/g, "$1")
-        .replace(/\*([^*]+)\*/g, "$1")
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-        .replace(/!\[.*?\]\(.*?\)/g, "")
-        .replace(/---/g, "")
-        .trim();
-      if (!clean) { toast.error("Nothing to convert"); return; }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: clean }),
-        }
-      );
-      if (!response.ok) throw new Error("TTS failed");
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `message-${msgId.slice(0, 8)}.mp3`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("Audio downloaded!");
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to generate audio");
-    } finally {
-      setDownloadingAudio(null);
-    }
-  };
+  const elevenLabs = useElevenLabsTTS();
 
   // Load reactions when messages change
   useEffect(() => {
@@ -244,6 +199,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             {getStatusText()}
           </p>
         </div>
+        <VoiceSelector value={elevenLabs.voiceId} onChange={elevenLabs.setVoiceId} />
         {messages.length > 0 && (
           <Button
             variant="ghost"
@@ -319,21 +275,31 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                     />
                     {msg.message_type === "text" && msg.content && (
                       <button
+                        onClick={() => elevenLabs.play(msg.content || "", msg.id)}
+                        disabled={elevenLabs.loadingId === msg.id}
+                        className={`p-1 rounded transition-colors ${elevenLabs.playingId === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                        title={elevenLabs.playingId === msg.id ? "Stop" : "Play with AI voice"}
+                      >
+                        {elevenLabs.loadingId === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : elevenLabs.playingId === msg.id ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                    {msg.message_type === "text" && msg.content && (
+                      <button
                         onClick={() => speak(msg.content || "", msg.id)}
                         className={`p-1 rounded transition-colors ${speaking === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
-                        title={speaking === msg.id ? "Stop" : "Read aloud"}
+                        title={speaking === msg.id ? "Stop browser TTS" : "Read aloud (browser)"}
                       >
                         {speaking === msg.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                       </button>
                     )}
                     {msg.message_type === "text" && msg.content && (
                       <button
-                        onClick={() => handleDownloadAudio(msg.content || "", msg.id)}
-                        disabled={downloadingAudio === msg.id}
-                        className={`p-1 rounded transition-colors ${downloadingAudio === msg.id ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                        onClick={() => elevenLabs.download(msg.content || "", msg.id)}
+                        disabled={elevenLabs.loadingId === msg.id}
+                        className={`p-1 rounded transition-colors ${elevenLabs.loadingId === msg.id ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
                         title="Download as audio"
                       >
-                        {downloadingAudio === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                        <Download className="w-3.5 h-3.5" />
                       </button>
                     )}
                     {msg.message_type === "text" && msg.content && (
