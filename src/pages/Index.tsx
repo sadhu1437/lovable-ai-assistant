@@ -338,7 +338,7 @@ const Index = () => {
         ) : !activeConv || activeConv.messages.length === 0 ? (
           <>
             <WelcomeScreen onPrompt={sendMessage} />
-            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} />
+            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
           </>
         ) : (
           <>
@@ -354,7 +354,7 @@ const Index = () => {
               {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && <TypingIndicator />}
               <div ref={messagesEndRef} />
             </div>
-            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} />
+            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
           </>
         )}
       </div>
