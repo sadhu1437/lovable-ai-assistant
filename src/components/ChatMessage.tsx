@@ -171,13 +171,24 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                           <div className="relative group rounded-lg overflow-hidden border border-border my-4">
                             <div className="flex items-center justify-between bg-secondary px-4 py-2.5 text-xs font-mono text-muted-foreground">
                               <span>{match[1]}</span>
-                              <button
-                                onClick={() => copyCode(codeStr, blockId)}
-                                className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-                              >
-                                {copied === blockId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                {copied === blockId ? "Copied" : "Copy"}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                {["javascript", "js", "typescript", "ts"].includes(match[1]) && (
+                                  <button
+                                    onClick={() => runCode(codeStr, blockId, match[1])}
+                                    className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                                  >
+                                    <PlayCircle className="w-3 h-3" />
+                                    Run
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => copyCode(codeStr, blockId)}
+                                  className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                                >
+                                  {copied === blockId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                  {copied === blockId ? "Copied" : "Copy"}
+                                </button>
+                              </div>
                             </div>
                             <SyntaxHighlighter
                               style={oneDark}
@@ -193,6 +204,12 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                             >
                               {codeStr}
                             </SyntaxHighlighter>
+                            {codeOutput[blockId] && (
+                              <div className="px-4 py-2.5 bg-background border-t border-border text-xs font-mono">
+                                <p className="text-[10px] text-muted-foreground mb-1">Output:</p>
+                                <pre className="text-foreground whitespace-pre-wrap">{codeOutput[blockId]}</pre>
+                              </div>
+                            )}
                           </div>
                         );
                       }
