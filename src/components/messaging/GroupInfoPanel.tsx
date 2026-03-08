@@ -195,6 +195,27 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
               {/* Add member search */}
               {showAddMember && isAdmin && (
                 <div className="space-y-2 p-3 rounded-lg bg-secondary/30 border border-border">
+                  {/* Quick add bot button */}
+                  {!hasBotMember && (
+                    <button
+                      onClick={addBotToGroup}
+                      disabled={addingBot}
+                      className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-secondary transition-colors text-left border border-primary/20 bg-primary/5"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+                        <Bot className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground font-mono">NexusAI Bot</p>
+                        <p className="text-[10px] text-muted-foreground font-mono">AI Assistant</p>
+                      </div>
+                      {addingBot ? (
+                        <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin ml-auto shrink-0" />
+                      ) : (
+                        <UserPlus className="w-3.5 h-3.5 text-primary ml-auto shrink-0" />
+                      )}
+                    </button>
+                  )}
                   <Input
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
