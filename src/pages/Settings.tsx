@@ -269,6 +269,7 @@ export default function Settings() {
           setUsername((data as any).username || "");
           setBio((data as any).bio || "");
           setGender((data as any).gender || "");
+          setStatusMessage((data as any).status_message || "");
         }
         setLoading(false);
       });
@@ -279,7 +280,7 @@ export default function Settings() {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null, bio: bio || null, gender: gender || null } as any)
+      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null, bio: bio || null, gender: gender || null, status_message: statusMessage || null } as any)
       .eq("user_id", user.id);
     setSaving(false);
     if (error) {
