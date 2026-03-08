@@ -14,7 +14,7 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange }: Cha
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -37,8 +37,8 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange }: Cha
   };
 
   const toggleVoice = useCallback(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
       toast.error("Speech recognition is not supported in your browser");
       return;
     }
@@ -49,7 +49,7 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange }: Cha
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new SpeechRecognitionAPI();
     recognition.lang = "en-US";
     recognition.interimResults = true;
     recognition.continuous = true;
