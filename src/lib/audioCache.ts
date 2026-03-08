@@ -7,23 +7,24 @@
 interface CacheEntry<T> {
   key: string;
   value: T;
-  size: number; // bytes for blobs, 1 for other
+  size: number;
   createdAt: number;
 }
 
-class LRUCache<T> {
+export class LRUCache<T> {
+  readonly label: string;
   private map = new Map<string, CacheEntry<T>>();
   private maxBytes: number;
   private currentBytes = 0;
 
-  constructor(maxBytes: number) {
+  constructor(maxBytes: number, label: string = "cache") {
     this.maxBytes = maxBytes;
+    this.label = label;
   }
 
   get(key: string): T | undefined {
     const entry = this.map.get(key);
     if (!entry) return undefined;
-    // Move to end (most recently used)
     this.map.delete(key);
     this.map.set(key, entry);
     return entry.value;
@@ -31,17 +32,13 @@ class LRUCache<T> {
 
   set(key: string, value: T, sizeBytes?: number): void {
     const size = sizeBytes ?? (value instanceof Blob ? value.size : 100);
-
-    // If single item exceeds budget, don't cache it
     if (size > this.maxBytes) return;
 
-    // Remove existing entry if updating
     if (this.map.has(key)) {
       this.currentBytes -= this.map.get(key)!.size;
       this.map.delete(key);
     }
 
-    // Evict LRU entries until we have room
     while (this.currentBytes + size > this.maxBytes && this.map.size > 0) {
       const oldest = this.map.keys().next().value;
       if (oldest !== undefined) {
@@ -73,6 +70,7 @@ class LRUCache<T> {
 
   get stats() {
     return {
+      label: this.label,
       entries: this.map.size,
       bytesUsed: this.currentBytes,
       maxBytes: this.maxBytes,
@@ -81,14 +79,26 @@ class LRUCache<T> {
 }
 
 // 50MB audio cache — holds ~50 average TTS responses
-export const audioCache = new LRUCache<Blob>(50 * 1024 * 1024);
+export const audioCache = new LRUCache<Blob>(50 * 1024 * 1024, "Audio (TTS)");
 
 // 5MB generic data cache for JSON responses, profile data, etc.
-export const dataCache = new LRUCache<unknown>(5 * 1024 * 1024);
+export const dataCache = new LRUCache<unknown>(5 * 1024 * 1024, "Data (Profiles & Rooms)");
+
+/** All caches registered for the stats UI */
+export const ALL_CACHES = [audioCache, dataCache] as const;
+
+/** Get combined stats across all caches */
+export function getAllCacheStats() {
+  return ALL_CACHES.map((c) => c.stats);
+}
+
+/** Clear all caches */
+export function clearAllCaches() {
+  ALL_CACHES.forEach((c) => c.clear());
+}
 
 /**
  * Fetch-with-cache wrapper for any async operation.
- * Returns cached value if available, otherwise calls fetcher and caches result.
  */
 export async function cachedFetch<T>(
   key: string,

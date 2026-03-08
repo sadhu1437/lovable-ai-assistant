@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { cachedFetch, dataCache } from "@/lib/audioCache";
 
 export interface ChatRoom {
   id: string;
@@ -45,8 +46,54 @@ export async function searchUsers(query: string): Promise<UserProfile[]> {
   return (data as UserProfile[]) || [];
 }
 
+/** Fetch a single profile by user_id, cached */
+export async function fetchProfileByUserId(userId: string): Promise<UserProfile | null> {
+  return cachedFetch<UserProfile | null>(
+    `profile:${userId}`,
+    async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, user_id, username, display_name, avatar_url")
+        .eq("user_id", userId)
+        .maybeSingle();
+      return (data as UserProfile) || null;
+    },
+    dataCache as any
+  );
+}
+
+/** Fetch multiple profiles by user_ids, cached individually */
+export async function fetchProfilesByUserIds(userIds: string[]): Promise<UserProfile[]> {
+  const results: UserProfile[] = [];
+  const uncachedIds: string[] = [];
+
+  for (const id of userIds) {
+    const cached = dataCache.get(`profile:${id}`) as UserProfile | undefined;
+    if (cached) {
+      results.push(cached);
+    } else {
+      uncachedIds.push(id);
+    }
+  }
+
+  if (uncachedIds.length > 0) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, user_id, username, display_name, avatar_url")
+      .in("user_id", uncachedIds);
+    if (data) {
+      for (const p of data) {
+        const profile = p as UserProfile;
+        dataCache.set(`profile:${profile.user_id}`, profile);
+        results.push(profile);
+      }
+    }
+  }
+
+  return results;
+}
+
 export async function createDM(currentUserId: string, otherUserId: string): Promise<string | null> {
-  // Batch check: get all DM rooms the current user is in, then check for overlap
   const { data: myRooms } = await supabase
     .from("chat_room_members")
     .select("room_id")
@@ -55,7 +102,6 @@ export async function createDM(currentUserId: string, otherUserId: string): Prom
   if (myRooms && myRooms.length > 0) {
     const roomIds = myRooms.map((r) => r.room_id);
 
-    // Single query: find rooms where the other user is also a member AND room type is dm
     const { data: sharedMembers } = await supabase
       .from("chat_room_members")
       .select("room_id")
@@ -63,7 +109,6 @@ export async function createDM(currentUserId: string, otherUserId: string): Prom
       .in("room_id", roomIds);
 
     if (sharedMembers && sharedMembers.length > 0) {
-      // Verify at least one is a DM room (batch)
       const { data: dmRooms } = await supabase
         .from("chat_rooms")
         .select("id")
@@ -77,7 +122,6 @@ export async function createDM(currentUserId: string, otherUserId: string): Prom
     }
   }
 
-  // Create new DM room
   const { data: room, error } = await supabase
     .from("chat_rooms")
     .insert({ type: "dm", created_by: currentUserId })
@@ -89,6 +133,9 @@ export async function createDM(currentUserId: string, otherUserId: string): Prom
     { room_id: room.id, user_id: currentUserId, role: "admin" },
     { room_id: room.id, user_id: otherUserId, role: "member" },
   ]);
+
+  // Invalidate rooms cache
+  dataCache.delete(`rooms:${currentUserId}`);
 
   return room.id;
 }
@@ -111,6 +158,8 @@ export async function createGroup(
   ];
   await supabase.from("chat_room_members").insert(members);
 
+  dataCache.delete(`rooms:${currentUserId}`);
+
   return room.id;
 }
 
@@ -131,6 +180,7 @@ export async function sendMessage(
 }
 
 export async function fetchRoomMessages(roomId: string) {
+  // Messages are real-time, don't cache them
   const { data } = await supabase
     .from("chat_messages")
     .select("*")
@@ -140,25 +190,45 @@ export async function fetchRoomMessages(roomId: string) {
   return (data as ChatMessage[]) || [];
 }
 
-export async function fetchUserRooms() {
-  const { data } = await supabase.from("chat_rooms").select("*").order("updated_at", { ascending: false });
-  return (data as ChatRoom[]) || [];
+/** Fetch user rooms, cached for 30s worth of data */
+export async function fetchUserRooms(userId?: string): Promise<ChatRoom[]> {
+  const key = userId ? `rooms:${userId}` : "rooms:anon";
+  return cachedFetch<ChatRoom[]>(
+    key,
+    async () => {
+      const { data } = await supabase.from("chat_rooms").select("*").order("updated_at", { ascending: false });
+      return (data as ChatRoom[]) || [];
+    },
+    dataCache as any
+  );
 }
 
 export async function fetchRoomMembers(roomId: string) {
-  const { data } = await supabase.from("chat_room_members").select("*").eq("room_id", roomId);
-  return (data as ChatRoomMember[]) || [];
+  return cachedFetch<ChatRoomMember[]>(
+    `members:${roomId}`,
+    async () => {
+      const { data } = await supabase.from("chat_room_members").select("*").eq("room_id", roomId);
+      return (data as ChatRoomMember[]) || [];
+    },
+    dataCache as any
+  );
 }
 
 export const BOT_USERNAME = "nexusai-bot";
 
 export async function getBotUserId(): Promise<string | null> {
-  const { data } = await supabase
-    .from("profiles")
-    .select("user_id")
-    .eq("username", BOT_USERNAME)
-    .maybeSingle();
-  return data?.user_id || null;
+  return cachedFetch<string | null>(
+    "bot-user-id",
+    async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("username", BOT_USERNAME)
+        .maybeSingle();
+      return data?.user_id || null;
+    },
+    dataCache as any
+  );
 }
 
 export async function createBotDM(currentUserId: string): Promise<string | null> {
