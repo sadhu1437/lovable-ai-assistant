@@ -84,6 +84,9 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
   const handleTyping = useCallback((value: string) => {
     setText(value);
+    // Show @mention dropdown when user types @ at word boundary
+    const cursorMatch = value.match(/(^|\s)@(\w{0,10})$/);
+    setShowMention(!!cursorMatch);
     if (value.trim()) {
       setTyping(true);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -92,6 +95,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
       setTyping(false);
     }
   }, [setTyping]);
+
+  const insertMention = useCallback(() => {
+    setText((prev) => {
+      // Replace the partial @... at the end with @nexusai
+      const replaced = prev.replace(/(^|\s)@\w{0,10}$/, "$1@nexusai ");
+      return replaced;
+    });
+    setShowMention(false);
+  }, []);
 
   const isBotRoom = useCallback(() => {
     // Only check the roomProfiles entry for this specific room (reliable DM member lookup)
