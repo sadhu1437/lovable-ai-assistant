@@ -23,6 +23,7 @@ interface ChatSidebarProps {
 export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, onPin, onGallery, showGallery, user, onSignOut }: ChatSidebarProps) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { notifications, unreadCount, loading: notifLoading, markAsRead, markAllAsRead, clearAll } = useNotificationContext();
 
   return (
     <div className="w-64 h-full bg-card border-r border-border flex flex-col">
