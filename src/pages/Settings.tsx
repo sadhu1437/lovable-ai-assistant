@@ -43,6 +43,21 @@ const TTL_OPTIONS = [
   { label: "1 hr", ms: 60 * 60 * 1000 },
 ];
 
+const AUDIO_SIZE_OPTIONS = [
+  { label: "10 MB", bytes: 10 * 1024 * 1024 },
+  { label: "25 MB", bytes: 25 * 1024 * 1024 },
+  { label: "50 MB", bytes: 50 * 1024 * 1024 },
+  { label: "100 MB", bytes: 100 * 1024 * 1024 },
+  { label: "200 MB", bytes: 200 * 1024 * 1024 },
+];
+
+const DATA_SIZE_OPTIONS = [
+  { label: "1 MB", bytes: 1 * 1024 * 1024 },
+  { label: "5 MB", bytes: 5 * 1024 * 1024 },
+  { label: "10 MB", bytes: 10 * 1024 * 1024 },
+  { label: "25 MB", bytes: 25 * 1024 * 1024 },
+];
+
 function formatTTL(ms: number): string {
   if (ms >= 3600000) return `${Math.round(ms / 3600000)} hr`;
   if (ms >= 60000) return `${Math.round(ms / 60000)} min`;
@@ -60,9 +75,13 @@ function CacheStatsPanel() {
     const saved = localStorage.getItem("nexus-cache-ttl-data");
     return saved ? Number(saved) : dataCache.stats.defaultTTL;
   });
+  const [audioMaxBytes, setAudioMaxBytes] = useState(() => audioCache.stats.maxBytes);
+  const [dataMaxBytes, setDataMaxBytes] = useState(() => dataCache.stats.maxBytes);
 
   const refresh = () => {
     setStats(getAllCacheStats());
+    setAudioMaxBytes(audioCache.stats.maxBytes);
+    setDataMaxBytes(dataCache.stats.maxBytes);
     getPersistedStats().then(setDiskStats).catch(() => {});
   };
 
@@ -92,6 +111,24 @@ function CacheStatsPanel() {
     toast.success(`Data TTL set to ${formatTTL(val)}`);
   };
 
+  const updateAudioSize = (bytes: string) => {
+    const val = Number(bytes);
+    setAudioMaxBytes(val);
+    audioCache.setMaxBytes(val);
+    localStorage.setItem("nexus-cache-size-audio", String(val));
+    refresh();
+    toast.success(`Audio cache limit set to ${formatBytes(val)}`);
+  };
+
+  const updateDataSize = (bytes: string) => {
+    const val = Number(bytes);
+    setDataMaxBytes(val);
+    dataCache.setMaxBytes(val);
+    localStorage.setItem("nexus-cache-size-data", String(val));
+    refresh();
+    toast.success(`Data cache limit set to ${formatBytes(val)}`);
+  };
+
   useEffect(() => {
     const savedAudio = localStorage.getItem("nexus-cache-ttl-audio");
     if (savedAudio) audioCache.setDefaultTTL(Number(savedAudio));
@@ -111,6 +148,9 @@ function CacheStatsPanel() {
           const isAudio = s.label.includes("Audio");
           const currentTTL = isAudio ? audioTTL : dataTTL;
           const onChangeTTL = isAudio ? updateAudioTTL : updateDataTTL;
+          const currentMaxBytes = isAudio ? audioMaxBytes : dataMaxBytes;
+          const onChangeSize = isAudio ? updateAudioSize : updateDataSize;
+          const sizeOptions = isAudio ? AUDIO_SIZE_OPTIONS : DATA_SIZE_OPTIONS;
           const diskCount = diskStats
             ? isAudio ? diskStats.audioEntries : diskStats.dataEntries
             : null;
@@ -123,8 +163,8 @@ function CacheStatsPanel() {
                 </span>
               </div>
               <Progress value={pct} className="h-2" />
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground font-mono">TTL:</span>
                   <Select value={String(currentTTL)} onValueChange={onChangeTTL}>
                     <SelectTrigger className="h-7 w-24 text-xs font-mono">
@@ -139,8 +179,23 @@ function CacheStatsPanel() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground font-mono">Max:</span>
+                  <Select value={String(currentMaxBytes)} onValueChange={onChangeSize}>
+                    <SelectTrigger className="h-7 w-24 text-xs font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sizeOptions.map((opt) => (
+                        <SelectItem key={opt.bytes} value={String(opt.bytes)} className="text-xs font-mono">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 {diskCount !== null && (
-                  <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 ml-auto">
                     <HardDrive className="w-3 h-3" />
                     {diskCount} on disk
                   </span>

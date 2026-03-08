@@ -183,6 +183,20 @@ export class LRUCache<T> {
   setDefaultTTL(ms: number): void {
     this.defaultTTL = Math.max(1000, ms);
   }
+
+  /** Resize the cache max bytes, evicting if needed */
+  setMaxBytes(bytes: number): void {
+    this.maxBytes = bytes;
+    // Evict until we fit
+    while (this.currentBytes > this.maxBytes && this.map.size > 0) {
+      const oldest = this.map.keys().next().value;
+      if (oldest !== undefined) {
+        this.currentBytes -= this.map.get(oldest)!.size;
+        this.map.delete(oldest);
+        if (this.persistStore) removePersistedEntry(this.persistStore, oldest);
+      }
+    }
+  }
 }
 
 // 50MB audio cache — 30 min TTL, persisted to IndexedDB
@@ -191,12 +205,16 @@ export const audioCache = new LRUCache<Blob>(50 * 1024 * 1024, "Audio (TTS)", DE
 // 5MB generic data cache — 2 min TTL, persisted to IndexedDB
 export const dataCache = new LRUCache<unknown>(5 * 1024 * 1024, "Data (Profiles & Rooms)", DEFAULT_TTL.data, "data");
 
-// Restore user-configured TTLs from localStorage
+// Restore user-configured TTLs and size limits from localStorage
 try {
   const savedAudio = localStorage.getItem("nexus-cache-ttl-audio");
   if (savedAudio) audioCache.setDefaultTTL(Number(savedAudio));
   const savedData = localStorage.getItem("nexus-cache-ttl-data");
   if (savedData) dataCache.setDefaultTTL(Number(savedData));
+  const savedAudioSize = localStorage.getItem("nexus-cache-size-audio");
+  if (savedAudioSize) audioCache.setMaxBytes(Number(savedAudioSize));
+  const savedDataSize = localStorage.getItem("nexus-cache-size-data");
+  if (savedDataSize) dataCache.setMaxBytes(Number(savedDataSize));
 } catch {}
 
 /** Hydrate all caches from IndexedDB — call once at app start */
