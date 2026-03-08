@@ -237,6 +237,7 @@ export default function Settings() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bio, setBio] = useState("");
   const [gender, setGender] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [defaultModel, setDefaultModel] = useState(() =>
     localStorage.getItem("nexus-default-model") || "google/gemini-3-flash-preview"
   );
