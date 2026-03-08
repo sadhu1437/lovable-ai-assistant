@@ -32,6 +32,7 @@ export default function Messages() {
   const [roomProfiles, setRoomProfiles] = useState<Record<string, UserProfile>>({});
   const [dialogMode, setDialogMode] = useState<"dm" | "group" | null>(null);
   const [loading, setLoading] = useState(true);
+  const [botLoading, setBotLoading] = useState(false);
   const profilesRef = useRef(profiles);
   profilesRef.current = profiles;
 
@@ -197,6 +198,8 @@ export default function Messages() {
           onNewDM={() => setDialogMode("dm")}
           onNewGroup={() => setDialogMode("group")}
           onChatWithBot={async () => {
+            if (botLoading) return;
+            setBotLoading(true);
             toast.info("Starting chat with NexusAI Bot...");
             const roomId = await createBotDM(user.id);
             if (roomId) {
@@ -205,6 +208,7 @@ export default function Messages() {
             } else {
               toast.error("Failed to start bot chat");
             }
+            setBotLoading(false);
           }}
           roomProfiles={roomProfiles}
           currentUserId={user.id}
