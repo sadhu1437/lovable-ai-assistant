@@ -1,26 +1,35 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
-import { Zap, Mail, Lock, User, Loader2 } from "lucide-react";
+import { Zap, Mail, Lock, User, Loader2, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigate } from "react-router-dom";
 
 export default function AuthPage() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  if (loading) return null;
+  if (user) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back!");
+        navigate("/");
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -36,7 +45,7 @@ export default function AuthPage() {
     } catch (err: any) {
       toast.error(err.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -59,6 +68,15 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
+        {/* Back button */}
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="font-mono text-xs">Back to chat</span>
+        </button>
+
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center mx-auto mb-4 glow-primary-strong">
@@ -68,7 +86,7 @@ export default function AuthPage() {
             Nexus<span className="text-primary text-glow">AI</span>
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {isLogin ? "Welcome back" : "Create your account"}
+            {isLogin ? "Sign in to save your conversations" : "Create your account"}
           </p>
         </div>
 
@@ -138,10 +156,10 @@ export default function AuthPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={submitting}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm glow-primary hover:glow-primary-strong transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {isLogin ? "Sign In" : "Create Account"}
           </button>
         </form>
