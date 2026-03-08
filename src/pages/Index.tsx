@@ -5,7 +5,7 @@ import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
-import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo } from "@/lib/chat";
+import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo, analyzeFile, readFileAsDataUrl, readFileAsText } from "@/lib/chat";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X, Download } from "lucide-react";
 import { toast } from "sonner";
