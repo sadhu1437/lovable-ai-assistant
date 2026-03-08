@@ -131,6 +131,47 @@ const Index = () => {
     setIsLoading(true);
     const localAssistantId = generateId();
 
+    // Check if this is an image generation request
+    if (isImageRequest(content)) {
+      await generateImage({
+        prompt: content,
+        onResult: async (text, images) => {
+          const assistantMsg: Message = {
+            id: localAssistantId,
+            role: "assistant",
+            content: text,
+            images,
+            timestamp: new Date(),
+          };
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === convId
+                ? { ...c, messages: [...c.messages, assistantMsg] }
+                : c
+            )
+          );
+          setIsLoading(false);
+          if (user) {
+            try {
+              const dbId = await saveMessage(convId!, "assistant", text);
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === convId
+                    ? { ...c, messages: c.messages.map((m) => m.id === localAssistantId ? { ...m, id: dbId } : m) }
+                    : c
+                )
+              );
+            } catch { /* non-critical */ }
+          }
+        },
+        onError: (err) => {
+          setIsLoading(false);
+          toast.error(err);
+        },
+      });
+      return;
+    }
+
     const existingMessages = conversationsRef.current.find((c) => c.id === convId)?.messages || [];
     const allMessages = [
       ...existingMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -165,7 +206,6 @@ const Index = () => {
       },
       onDone: async () => {
         setIsLoading(false);
-        // Save assistant message to DB if logged in
         if (user) {
           const finalConv = conversationsRef.current.find((c) => c.id === convId);
           const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
@@ -184,9 +224,7 @@ const Index = () => {
                     : c
                 )
               );
-            } catch {
-              // Non-critical
-            }
+            } catch { /* non-critical */ }
           }
         }
       },
