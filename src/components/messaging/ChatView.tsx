@@ -307,10 +307,13 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           const isMe = msg.sender_id === currentUserId;
           const avatar = getAvatar(msg.sender_id);
           const msgReactions = reactions[msg.id] || [];
+          const isMsgBot = isBotMessage(msg.sender_id);
           return (
             <div key={msg.id} className={`group flex gap-2 ${isMe ? "flex-row-reverse" : ""}`} tabIndex={0}>
-              <div className="w-7 h-7 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0 mt-1">
-                {avatar ? (
+              <div className={`w-7 h-7 rounded-full ${isMsgBot ? "bg-primary/20 border-primary/40" : "bg-secondary border-border"} border flex items-center justify-center overflow-hidden shrink-0 mt-1`}>
+                {isMsgBot ? (
+                  <Bot className="w-3.5 h-3.5 text-primary" />
+                ) : avatar ? (
                   <img src={avatar} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-[10px] font-mono text-foreground">
@@ -319,8 +322,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                 )}
               </div>
               <div className={`max-w-[70%] ${isMe ? "items-end" : "items-start"}`}>
-                {!isMe && room.type === "group" && (
-                  <p className="text-[10px] text-muted-foreground font-mono mb-0.5">{getDisplayName(msg.sender_id)}</p>
+                {!isMe && (room.type === "group" || isMsgBot) && (
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <p className="text-[10px] text-muted-foreground font-mono">{getDisplayName(msg.sender_id)}</p>
+                    {isMsgBot && (
+                      <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">
+                        Bot
+                      </span>
+                    )}
+                  </div>
                 )}
                 <div className="relative">
                   {editingMsgId === msg.id ? (
