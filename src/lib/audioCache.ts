@@ -205,12 +205,16 @@ export const audioCache = new LRUCache<Blob>(50 * 1024 * 1024, "Audio (TTS)", DE
 // 5MB generic data cache — 2 min TTL, persisted to IndexedDB
 export const dataCache = new LRUCache<unknown>(5 * 1024 * 1024, "Data (Profiles & Rooms)", DEFAULT_TTL.data, "data");
 
-// Restore user-configured TTLs from localStorage
+// Restore user-configured TTLs and size limits from localStorage
 try {
   const savedAudio = localStorage.getItem("nexus-cache-ttl-audio");
   if (savedAudio) audioCache.setDefaultTTL(Number(savedAudio));
   const savedData = localStorage.getItem("nexus-cache-ttl-data");
   if (savedData) dataCache.setDefaultTTL(Number(savedData));
+  const savedAudioSize = localStorage.getItem("nexus-cache-size-audio");
+  if (savedAudioSize) audioCache.setMaxBytes(Number(savedAudioSize));
+  const savedDataSize = localStorage.getItem("nexus-cache-size-data");
+  if (savedDataSize) dataCache.setMaxBytes(Number(savedDataSize));
 } catch {}
 
 /** Hydrate all caches from IndexedDB — call once at app start */
