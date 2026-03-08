@@ -236,6 +236,7 @@ export default function Settings() {
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bio, setBio] = useState("");
+  const [gender, setGender] = useState("");
   const [defaultModel, setDefaultModel] = useState(() =>
     localStorage.getItem("nexus-default-model") || "google/gemini-3-flash-preview"
   );
@@ -266,6 +267,7 @@ export default function Settings() {
           setAvatarUrl(data.avatar_url || "");
           setUsername((data as any).username || "");
           setBio((data as any).bio || "");
+          setGender((data as any).gender || "");
         }
         setLoading(false);
       });
@@ -276,7 +278,7 @@ export default function Settings() {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null, bio: bio || null } as any)
+      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null, bio: bio || null, gender: gender || null } as any)
       .eq("user_id", user.id);
     setSaving(false);
     if (error) {
@@ -442,6 +444,20 @@ export default function Settings() {
                     maxLength={200}
                   />
                   <p className="text-[10px] text-muted-foreground">{bio.length}/200 characters</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender" className="font-mono text-xs">Gender</Label>
+                  <Select value={gender} onValueChange={setGender}>
+                    <SelectTrigger className="font-mono text-sm">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="non-binary">Non-binary</SelectItem>
+                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button onClick={saveProfile} disabled={saving} className="gap-2 font-mono text-xs">
                   <Save className="w-3.5 h-3.5" />
