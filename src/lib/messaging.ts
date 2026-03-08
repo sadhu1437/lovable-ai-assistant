@@ -269,3 +269,9 @@ export async function pinChatMessage(messageId: string, userId: string, pin: boo
     )
     .eq("id", messageId);
 }
+
+/** Delete an entire chat room and all its messages (any member can call) */
+export async function deleteChatRoom(roomId: string) {
+  const { data, error } = await supabase.rpc("delete_chat_room", { _room_id: roomId });
+  return { success: !!data, error };
+}
