@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Loader2, Mic, MicOff, ChevronDown, Paperclip, X, FileText, Image as ImageIcon } from "lucide-react";
+import { Send, Loader2, Mic, MicOff, ChevronDown, Paperclip, X, FileText, Image as ImageIcon, Code } from "lucide-react";
 import { categories, aiModels } from "@/lib/chat";
 import { toast } from "sonner";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onCanvasSend?: (message: string) => void;
   onFileUpload?: (file: File, prompt?: string) => void;
   isLoading: boolean;
   category: string;
@@ -13,8 +14,9 @@ interface ChatInputProps {
   onModelChange: (model: string) => void;
 }
 
-export function ChatInput({ onSend, onFileUpload, isLoading, category, onCategoryChange, model, onModelChange }: ChatInputProps) {
+export function ChatInput({ onSend, onCanvasSend, onFileUpload, isLoading, category, onCategoryChange, model, onModelChange }: ChatInputProps) {
   const [input, setInput] = useState("");
+  const [canvasMode, setCanvasMode] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -51,7 +53,12 @@ export function ChatInput({ onSend, onFileUpload, isLoading, category, onCategor
       return;
     }
     if (!input.trim() || isLoading) return;
-    onSend(input.trim());
+    if (canvasMode && onCanvasSend) {
+      onCanvasSend(input.trim());
+      setCanvasMode(false);
+    } else {
+      onSend(input.trim());
+    }
     setInput("");
   };
 
