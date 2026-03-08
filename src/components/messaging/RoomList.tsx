@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Search, Users, MessageCircle } from "lucide-react";
+import { Search, Users, MessageCircle, Bot } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OnlineIndicator } from "./OnlineIndicator";
 import type { ChatRoom, UserProfile } from "@/lib/messaging";
+import { BOT_USERNAME } from "@/lib/messaging";
 
 interface RoomListProps {
   rooms: ChatRoom[];
@@ -10,12 +11,13 @@ interface RoomListProps {
   onSelectRoom: (id: string) => void;
   onNewDM: () => void;
   onNewGroup: () => void;
+  onChatWithBot: () => void;
   roomProfiles: Record<string, UserProfile>;
   currentUserId: string;
   onlineUsers: Set<string>;
 }
 
-export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
+export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, onChatWithBot, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
   const [search, setSearch] = useState("");
 
   const filtered = rooms.filter((r) => {
@@ -37,7 +39,13 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
   const isRoomUserOnline = (room: ChatRoom) => {
     if (room.type !== "dm") return false;
     const profile = roomProfiles[room.id];
+    if (profile?.username === BOT_USERNAME) return true;
     return profile ? onlineUsers.has(profile.user_id) : false;
+  };
+
+  const isRoomBot = (room: ChatRoom) => {
+    if (room.type !== "dm") return false;
+    return roomProfiles[room.id]?.username === BOT_USERNAME;
   };
 
   return (
@@ -53,19 +61,27 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
             className="pl-8 h-8 text-xs font-mono"
           />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <button
-            onClick={onNewDM}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-xs text-foreground transition-all font-mono"
+            onClick={onChatWithBot}
+            className="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs text-primary transition-all font-mono font-medium"
           >
-            <MessageCircle className="w-3.5 h-3.5" /> New Chat
+            <Bot className="w-3.5 h-3.5" /> Chat with NexusAI
           </button>
-          <button
-            onClick={onNewGroup}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-xs text-foreground transition-all font-mono"
-          >
-            <Users className="w-3.5 h-3.5" /> New Group
-          </button>
+          <div className="flex gap-1.5">
+            <button
+              onClick={onNewDM}
+              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-xs text-foreground transition-all font-mono"
+            >
+              <MessageCircle className="w-3.5 h-3.5" /> New Chat
+            </button>
+            <button
+              onClick={onNewGroup}
+              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary text-xs text-foreground transition-all font-mono"
+            >
+              <Users className="w-3.5 h-3.5" /> New Group
+            </button>
+          </div>
         </div>
       </div>
 
@@ -89,7 +105,9 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
               >
                 <div className="relative shrink-0">
                   <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-mono text-foreground overflow-hidden">
-                    {avatar ? (
+                    {isRoomBot(room) ? (
+                      <Bot className="w-4 h-4 text-primary" />
+                    ) : avatar ? (
                       <img src={avatar} alt="" className="w-full h-full object-cover" />
                     ) : room.type === "group" ? (
                       <Users className="w-4 h-4" />
@@ -102,7 +120,7 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{name}</p>
                   <p className={`text-[10px] truncate ${isOnline ? "text-primary" : "text-muted-foreground"}`}>
-                    {room.type === "group" ? "Group" : isOnline ? "Online" : "Offline"}
+                    {isRoomBot(room) ? "AI Assistant" : room.type === "group" ? "Group" : isOnline ? "Online" : "Offline"}
                   </p>
                 </div>
               </button>

@@ -145,3 +145,34 @@ export async function fetchRoomMembers(roomId: string) {
   const { data } = await supabase.from("chat_room_members").select("*").eq("room_id", roomId);
   return (data as ChatRoomMember[]) || [];
 }
+
+export const BOT_USERNAME = "nexusai-bot";
+
+export async function getBotUserId(): Promise<string | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("username", BOT_USERNAME)
+    .maybeSingle();
+  return data?.user_id || null;
+}
+
+export async function createBotDM(currentUserId: string): Promise<string | null> {
+  // First trigger the edge function to ensure the bot user exists
+  const { data: initData, error: initError } = await supabase.functions.invoke("chat-bot-reply", {
+    body: { room_id: "init", message: "hello" },
+  });
+  
+  // Now get the bot user id
+  const botUserId = initData?.bot_user_id;
+  if (!botUserId) return null;
+
+  // Use normal DM creation flow
+  return createDM(currentUserId, botUserId);
+}
+
+export async function triggerBotReply(roomId: string, message: string) {
+  return supabase.functions.invoke("chat-bot-reply", {
+    body: { room_id: roomId, message },
+  });
+}

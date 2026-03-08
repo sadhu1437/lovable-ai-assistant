@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { RoomList } from "@/components/messaging/RoomList";
@@ -13,6 +14,7 @@ import {
   fetchUserRooms,
   fetchRoomMessages,
   fetchRoomMembers,
+  createBotDM,
   type ChatRoom,
   type ChatMessage,
   type UserProfile,
@@ -141,6 +143,16 @@ export default function Messages() {
           onSelectRoom={setActiveRoomId}
           onNewDM={() => setDialogMode("dm")}
           onNewGroup={() => setDialogMode("group")}
+          onChatWithBot={async () => {
+            toast.info("Starting chat with NexusAI Bot...");
+            const roomId = await createBotDM(user.id);
+            if (roomId) {
+              await loadRooms();
+              setActiveRoomId(roomId);
+            } else {
+              toast.error("Failed to start bot chat");
+            }
+          }}
           roomProfiles={roomProfiles}
           currentUserId={user.id}
           onlineUsers={onlineUsers}

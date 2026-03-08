@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
-import { sendMessage } from "@/lib/messaging";
+import { sendMessage, triggerBotReply, BOT_USERNAME } from "@/lib/messaging";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -30,6 +30,7 @@ interface ChatViewProps {
 export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy }: ChatViewProps) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [botThinking, setBotThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,6 +59,11 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     }
   }, [setTyping]);
 
+  const isBotRoom = useCallback(() => {
+    const other = Object.values(profiles).find((p) => p.user_id !== currentUserId);
+    return other?.username === BOT_USERNAME;
+  }, [profiles, currentUserId]);
+
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
@@ -66,8 +72,16 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     setTyping(false);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     const { error } = await sendMessage(room.id, currentUserId, trimmed);
-    if (error) toast.error("Failed to send message");
+    if (error) { toast.error("Failed to send message"); setSending(false); return; }
     setSending(false);
+
+    // Auto-trigger bot reply
+    if (isBotRoom()) {
+      setBotThinking(true);
+      const { error: botErr } = await triggerBotReply(room.id, trimmed);
+      if (botErr) toast.error("Bot failed to reply");
+      setBotThinking(false);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,9 +108,10 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   };
 
   const otherUser = Object.values(profiles).find((p) => p.user_id !== currentUserId);
+  const isBot = otherUser?.username === BOT_USERNAME;
   const roomName = room.type === "group" ? room.name || "Unnamed Group" : otherUser?.display_name || "Chat";
   const otherUserId = otherUser?.user_id;
-  const isOtherOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
+  const isOtherOnline = isBot ? true : (otherUserId ? onlineUsers.has(otherUserId) : false);
 
   const typingNames = Array.from(typingUsers).map((uid) => getDisplayName(uid));
 
@@ -109,6 +124,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
       const onlineCount = Array.from(onlineUsers).length;
       return `${onlineCount} online`;
     }
+    if (isBot) return "AI Assistant • Always Online";
     if (isOtherOnline) return "Online";
     return "Offline";
   };
@@ -126,6 +142,8 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
             {room.type === "group" ? (
               <Users className="w-4 h-4 text-foreground" />
+            ) : isBot ? (
+              <Bot className="w-4 h-4 text-primary" />
             ) : (
               (() => {
                 const otherAvatar = otherUser?.avatar_url;
@@ -214,6 +232,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             </div>
           );
         })}
+        {botThinking && <TypingBubble names={["NexusAI Bot"]} />}
         <TypingBubble names={typingNames} />
       </div>
 
