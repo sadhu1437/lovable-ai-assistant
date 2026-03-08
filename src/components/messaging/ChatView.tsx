@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Send, Image as ImageIcon, Paperclip, Users, ArrowLeft } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Paperclip, Users, ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -7,6 +7,9 @@ import { sendMessage } from "@/lib/messaging";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { TypingBubble } from "./TypingBubble";
+import { OnlineIndicator } from "./OnlineIndicator";
+import { ReadReceiptIcon } from "./ReadReceiptIcon";
 
 interface ChatViewProps {
   room: ChatRoom;
@@ -14,23 +17,41 @@ interface ChatViewProps {
   currentUserId: string;
   profiles: Record<string, UserProfile>;
   onBack?: () => void;
+  onlineUsers: Set<string>;
+  typingUsers: Set<string>;
+  setTyping: (isTyping: boolean) => void;
+  readBy: Record<string, string[]>;
 }
 
-export function ChatView({ room, messages, currentUserId, profiles, onBack }: ChatViewProps) {
+export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy }: ChatViewProps) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [messages, typingUsers.size]);
+
+  const handleTyping = useCallback((value: string) => {
+    setText(value);
+    if (value.trim()) {
+      setTyping(true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => setTyping(false), 2000);
+    } else {
+      setTyping(false);
+    }
+  }, [setTyping]);
 
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
     setSending(true);
     setText("");
+    setTyping(false);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     const { error } = await sendMessage(room.id, currentUserId, trimmed);
     if (error) toast.error("Failed to send message");
     setSending(false);
@@ -40,13 +61,10 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack }: Ch
     const file = e.target.files?.[0];
     if (!file) return;
     const isImage = file.type.startsWith("image/");
-    const bucket = "avatars"; // reuse bucket for simplicity
+    const bucket = "avatars";
     const path = `chat-media/${room.id}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
-    if (error) {
-      toast.error("Upload failed");
-      return;
-    }
+    if (error) { toast.error("Upload failed"); return; }
     const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
     await sendMessage(room.id, currentUserId, file.name, isImage ? "image" : "file", urlData.publicUrl);
     e.target.value = "";
@@ -62,9 +80,28 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack }: Ch
     return p?.avatar_url;
   };
 
-  const roomName = room.type === "group"
-    ? room.name || "Unnamed Group"
-    : Object.values(profiles).find((p) => p.user_id !== currentUserId)?.display_name || "Chat";
+  const otherUser = Object.values(profiles).find((p) => p.user_id !== currentUserId);
+  const roomName = room.type === "group" ? room.name || "Unnamed Group" : otherUser?.display_name || "Chat";
+  const otherUserId = otherUser?.user_id;
+  const isOtherOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
+
+  // Typing indicator names
+  const typingNames = Array.from(typingUsers).map((uid) => getDisplayName(uid));
+
+  // Find last read message for read receipts
+  const getReadStatus = (msgId: string) => {
+    return (readBy[msgId] || []).length > 0;
+  };
+
+  // Status text for header
+  const getStatusText = () => {
+    if (room.type === "group") {
+      const onlineCount = Array.from(onlineUsers).length;
+      return `${onlineCount} online`;
+    }
+    if (isOtherOnline) return "Online";
+    return "Offline";
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background">
@@ -75,24 +112,27 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack }: Ch
             <ArrowLeft className="w-4 h-4" />
           </Button>
         )}
-        <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
-          {room.type === "group" ? (
-            <Users className="w-4 h-4 text-foreground" />
-          ) : (
-            (() => {
-              const otherAvatar = Object.values(profiles).find((p) => p.user_id !== currentUserId)?.avatar_url;
-              return otherAvatar ? (
-                <img src={otherAvatar} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xs font-mono text-foreground">{(roomName || "U")[0].toUpperCase()}</span>
-              );
-            })()
-          )}
+        <div className="relative">
+          <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
+            {room.type === "group" ? (
+              <Users className="w-4 h-4 text-foreground" />
+            ) : (
+              (() => {
+                const otherAvatar = otherUser?.avatar_url;
+                return otherAvatar ? (
+                  <img src={otherAvatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs font-mono text-foreground">{(roomName || "U")[0].toUpperCase()}</span>
+                );
+              })()
+            )}
+          </div>
+          {room.type === "dm" && <OnlineIndicator isOnline={isOtherOnline} />}
         </div>
         <div>
           <h3 className="text-sm font-semibold text-foreground font-mono">{roomName}</h3>
-          <p className="text-[10px] text-muted-foreground">
-            {room.type === "group" ? "Group chat" : "Direct message"}
+          <p className={`text-[10px] font-mono ${isOtherOnline || room.type === "group" ? "text-primary" : "text-muted-foreground"}`}>
+            {getStatusText()}
           </p>
         </div>
       </div>
@@ -139,30 +179,27 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack }: Ch
                     <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                   )}
                 </div>
-                <p className={`text-[9px] text-muted-foreground mt-0.5 ${isMe ? "text-right" : ""}`}>
+                <p className={`text-[9px] text-muted-foreground mt-0.5 flex items-center ${isMe ? "justify-end" : ""}`}>
                   {format(new Date(msg.created_at), "HH:mm")}
+                  {isMe && <ReadReceiptIcon isRead={getReadStatus(msg.id)} />}
                 </p>
               </div>
             </div>
           );
         })}
+        <TypingBubble names={typingNames} />
       </div>
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border bg-card">
         <div className="flex items-center gap-2">
           <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileUpload} />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0"
-            onClick={() => fileInputRef.current?.click()}
-          >
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => fileInputRef.current?.click()}>
             <Paperclip className="w-4 h-4" />
           </Button>
           <Input
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => handleTyping(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder="Type a message..."
             className="text-sm font-mono"

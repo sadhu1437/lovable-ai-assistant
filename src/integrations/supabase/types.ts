@@ -144,6 +144,35 @@ export type Database = {
         }
         Relationships: []
       }
+      message_read_receipts: {
+        Row: {
+          id: string
+          message_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_read_receipts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -182,6 +211,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          last_seen: string | null
           updated_at: string
           user_id: string
           username: string | null
@@ -191,6 +221,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          last_seen?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -200,6 +231,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          last_seen?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null
