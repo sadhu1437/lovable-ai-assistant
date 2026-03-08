@@ -278,6 +278,36 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
 
               {/* Action buttons */}
               <div className="flex items-center gap-1 mt-4 pt-2">
+                {elevenLabs && (
+                  <>
+                    <button
+                      onClick={() => elevenLabs.play(message.content, message.id)}
+                      disabled={elevenLabs.loadingId === message.id}
+                      className={`p-1.5 rounded-lg transition-all ${
+                        elevenLabs.playingId === message.id
+                          ? "text-primary bg-primary/10"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      }`}
+                      title={elevenLabs.playingId === message.id ? "Stop ElevenLabs audio" : "Play with ElevenLabs"}
+                    >
+                      {elevenLabs.loadingId === message.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : elevenLabs.playingId === message.id ? (
+                        <Square className="w-3.5 h-3.5 fill-primary" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => elevenLabs.download(message.content, message.id)}
+                      disabled={elevenLabs.loadingId === message.id}
+                      className="p-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      title="Download as MP3"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => speak(message.content, message.id)}
                   className={`p-1.5 rounded-lg transition-all ${
@@ -285,7 +315,7 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                       ? "text-primary bg-primary/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                   }`}
-                  title={speaking === message.id ? "Stop speaking" : "Read aloud"}
+                  title={speaking === message.id ? "Stop speaking" : "Read aloud (browser)"}
                 >
                   {speaking === message.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                 </button>
