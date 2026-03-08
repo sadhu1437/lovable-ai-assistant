@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import { TypingBubble } from "./TypingBubble";
 import { OnlineIndicator } from "./OnlineIndicator";
 import { ReadReceiptIcon } from "./ReadReceiptIcon";
+import { VoiceRecorder } from "./VoiceRecorder";
+import { VoicePlayer } from "./VoicePlayer";
 
 interface ChatViewProps {
   room: ChatRoom;
