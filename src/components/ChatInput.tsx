@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
 import { Send, Loader2, Mic, MicOff, ChevronDown, Paperclip, X, FileText, Image as ImageIcon, Code } from "lucide-react";
 import { categories, aiModels } from "@/lib/chat";
 import { toast } from "sonner";
@@ -14,7 +14,11 @@ interface ChatInputProps {
   onModelChange: (model: string) => void;
 }
 
-export function ChatInput({ onSend, onCanvasSend, onFileUpload, isLoading, category, onCategoryChange, model, onModelChange }: ChatInputProps) {
+export interface ChatInputHandle {
+  focus: () => void;
+}
+
+export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput({ onSend, onCanvasSend, onFileUpload, isLoading, category, onCategoryChange, model, onModelChange }, ref) {
   const [input, setInput] = useState("");
   const [canvasMode, setCanvasMode] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -23,6 +27,10 @@ export function ChatInput({ onSend, onCanvasSend, onFileUpload, isLoading, categ
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => textareaRef.current?.focus(),
+  }));
   const recognitionRef = useRef<any>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -332,4 +340,4 @@ export function ChatInput({ onSend, onCanvasSend, onFileUpload, isLoading, categ
       </div>
     </div>
   );
-}
+});

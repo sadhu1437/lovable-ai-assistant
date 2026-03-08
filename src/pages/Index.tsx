@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { ChatMessage } from "@/components/ChatMessage";
-import { ChatInput } from "@/components/ChatInput";
+import { ChatInput, type ChatInputHandle } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
@@ -33,6 +33,7 @@ const Index = () => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<ChatInputHandle>(null);
   const conversationsRef = useRef(conversations);
   conversationsRef.current = conversations;
 
@@ -56,7 +57,26 @@ const Index = () => {
     }
   }, [user]);
 
-  // Load messages when active conversation changes (for DB-backed convos)
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key === 'n') {
+        e.preventDefault();
+        setActiveId(null);
+        setShowGallery(false);
+        setSidebarOpen(false);
+        setTimeout(() => chatInputRef.current?.focus(), 100);
+      }
+      if (mod && e.key === '/') {
+        e.preventDefault();
+        chatInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   useEffect(() => {
     if (!activeId || !user) return;
     const conv = conversations.find((c) => c.id === activeId);
@@ -688,7 +708,7 @@ const Index = () => {
         ) : !activeConv || activeConv.messages.length === 0 ? (
           <>
             <WelcomeScreen onPrompt={sendMessage} />
-            <ChatInput onSend={sendMessage} onCanvasSend={handleCanvasSend} onFileUpload={handleFileUpload} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
+            <ChatInput ref={chatInputRef} onSend={sendMessage} onCanvasSend={handleCanvasSend} onFileUpload={handleFileUpload} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
           </>
         ) : (
           <>
@@ -735,7 +755,7 @@ const Index = () => {
               {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && <TypingIndicator />}
               <div ref={messagesEndRef} />
             </div>
-            <ChatInput onSend={sendMessage} onCanvasSend={handleCanvasSend} onFileUpload={handleFileUpload} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
+            <ChatInput ref={chatInputRef} onSend={sendMessage} onCanvasSend={handleCanvasSend} onFileUpload={handleFileUpload} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
           </>
         )}
       </div>
