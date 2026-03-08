@@ -5,7 +5,7 @@ import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
-import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo } from "@/lib/chat";
+import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo, analyzeFile, readFileAsDataUrl, readFileAsText } from "@/lib/chat";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -342,6 +342,123 @@ const Index = () => {
     });
   };
 
+  const handleFileUpload = async (file: File, prompt?: string) => {
+    let convId = activeId;
+    const isNew = !convId;
+    const title = prompt?.slice(0, 40) || `📎 ${file.name}`;
+
+    if (isNew) {
+      if (user) {
+        try {
+          convId = await dbCreateConversation(user.id, title, category);
+        } catch {
+          toast.error("Failed to create conversation");
+          return;
+        }
+      } else {
+        convId = generateId();
+      }
+      const conv: Conversation = { id: convId, title, messages: [], category, createdAt: new Date() };
+      setConversations((prev) => [conv, ...prev]);
+      setActiveId(convId);
+    }
+
+    const isImage = file.type.startsWith("image/");
+    let fileContent: string;
+    let dataUrl: string | undefined;
+
+    try {
+      if (isImage) {
+        fileContent = await readFileAsDataUrl(file);
+        dataUrl = fileContent;
+      } else {
+        fileContent = await readFileAsText(file);
+      }
+    } catch {
+      toast.error("Failed to read file");
+      return;
+    }
+
+    const userMsg: Message = {
+      id: generateId(),
+      role: "user",
+      content: prompt ? `📎 **${file.name}** — ${prompt}` : `📎 **${file.name}**`,
+      filePreview: { name: file.name, type: file.type, isImage, dataUrl },
+      timestamp: new Date(),
+    };
+
+    if (user) {
+      try {
+        const dbId = await saveMessage(convId!, "user", userMsg.content);
+        userMsg.id = dbId;
+      } catch { /* continue locally */ }
+    }
+
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === convId
+          ? { ...c, messages: [...c.messages, userMsg], title: c.messages.length === 0 ? title : c.title }
+          : c
+      )
+    );
+
+    setIsLoading(true);
+    const localAssistantId = generateId();
+
+    await analyzeFile({
+      fileName: file.name,
+      fileType: file.type,
+      fileContent,
+      userPrompt: prompt,
+      onDelta: (delta) => {
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== convId) return c;
+            const existing = c.messages.find((m) => m.id === localAssistantId);
+            if (existing) {
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === localAssistantId ? { ...m, content: m.content + delta } : m
+                ),
+              };
+            }
+            return {
+              ...c,
+              messages: [
+                ...c.messages,
+                { id: localAssistantId, role: "assistant" as const, content: delta, timestamp: new Date() },
+              ],
+            };
+          })
+        );
+      },
+      onDone: async () => {
+        setIsLoading(false);
+        if (user) {
+          const finalConv = conversationsRef.current.find((c) => c.id === convId);
+          const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
+          if (assistantMsg) {
+            try {
+              const dbId = await saveMessage(convId!, "assistant", assistantMsg.content);
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === convId
+                    ? { ...c, messages: c.messages.map((m) => m.id === localAssistantId ? { ...m, id: dbId } : m) }
+                    : c
+                )
+              );
+            } catch { /* non-critical */ }
+          }
+        }
+      },
+      onError: (err) => {
+        setIsLoading(false);
+        toast.error(err);
+      },
+    });
+  };
+
   return (
     <div className="h-screen flex bg-background overflow-hidden">
       {/* Mobile toggle */}
@@ -382,7 +499,7 @@ const Index = () => {
         ) : !activeConv || activeConv.messages.length === 0 ? (
           <>
             <WelcomeScreen onPrompt={sendMessage} />
-            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
+            <ChatInput onSend={sendMessage} onFileUpload={handleFileUpload} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
           </>
         ) : (
           <>
@@ -427,7 +544,7 @@ const Index = () => {
               {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && <TypingIndicator />}
               <div ref={messagesEndRef} />
             </div>
-            <ChatInput onSend={sendMessage} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
+            <ChatInput onSend={sendMessage} onFileUpload={handleFileUpload} isLoading={isLoading} category={category} onCategoryChange={setCategory} model={model} onModelChange={setModel} />
           </>
         )}
       </div>
