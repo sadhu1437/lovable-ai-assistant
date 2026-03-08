@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Search, Users, MessageCircle } from "lucide-react";
+import { Search, Users, MessageCircle, Bot } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OnlineIndicator } from "./OnlineIndicator";
 import type { ChatRoom, UserProfile } from "@/lib/messaging";
+import { BOT_USERNAME } from "@/lib/messaging";
 
 interface RoomListProps {
   rooms: ChatRoom[];
@@ -10,12 +11,13 @@ interface RoomListProps {
   onSelectRoom: (id: string) => void;
   onNewDM: () => void;
   onNewGroup: () => void;
+  onChatWithBot: () => void;
   roomProfiles: Record<string, UserProfile>;
   currentUserId: string;
   onlineUsers: Set<string>;
 }
 
-export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
+export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, onChatWithBot, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
   const [search, setSearch] = useState("");
 
   const filtered = rooms.filter((r) => {
