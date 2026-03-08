@@ -33,10 +33,23 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
           <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center glow-primary">
             <span className="text-sm font-bold font-mono">N</span>
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-sm font-semibold text-foreground font-mono">NexusAI</h1>
             <p className="text-[10px] text-muted-foreground">Ultra-fast AI</p>
           </div>
+          {user && (
+            <NotificationCenter
+              notifications={notifications}
+              unreadCount={unreadCount}
+              loading={notifLoading}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+              onClearAll={clearAll}
+              onNotificationClick={(notif) => {
+                if (notif.room_id) navigate("/messages");
+              }}
+            />
+          )}
         </div>
         <button
           onClick={onNew}
