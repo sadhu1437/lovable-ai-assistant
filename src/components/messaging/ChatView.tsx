@@ -451,31 +451,53 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             <ArrowLeft className="w-4 h-4" />
           </Button>
         )}
-        <div className="relative">
-          <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
-            {room.type === "group" ? (
-              <Users className="w-4 h-4 text-foreground" />
-            ) : isBot ? (
-              <Bot className="w-4 h-4 text-primary" />
-            ) : (
-              (() => {
-                const otherAvatar = otherUser?.avatar_url;
-                return otherAvatar ? (
-                  <img src={otherAvatar} alt="" className="w-full h-full object-cover" />
+        {room.type === "dm" && otherUserId ? (
+          <ProfileCard userId={otherUserId} onlineUsers={onlineUsers} onStartDM={onStartDM} currentUserId={currentUserId}>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
+                  {isBot ? (
+                    <Bot className="w-4 h-4 text-primary" />
+                  ) : (
+                    (() => {
+                      const otherAvatar = otherUser?.avatar_url;
+                      return otherAvatar ? (
+                        <img src={otherAvatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-mono text-foreground">{(roomName || "U")[0].toUpperCase()}</span>
+                      );
+                    })()
+                  )}
+                </div>
+                <OnlineIndicator isOnline={isOtherOnline} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground font-mono text-left">{roomName}</h3>
+                <p className={`text-[10px] font-mono text-left ${isOtherOnline ? "text-primary" : "text-muted-foreground"}`}>
+                  {getStatusText()}
+                </p>
+              </div>
+            </div>
+          </ProfileCard>
+        ) : (
+          <>
+            <div className="relative">
+              <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
+                {room.type === "group" ? (
+                  <Users className="w-4 h-4 text-foreground" />
                 ) : (
                   <span className="text-xs font-mono text-foreground">{(roomName || "U")[0].toUpperCase()}</span>
-                );
-              })()
-            )}
-          </div>
-          {room.type === "dm" && <OnlineIndicator isOnline={isOtherOnline} />}
-        </div>
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold text-foreground font-mono">{roomName}</h3>
-          <p className={`text-[10px] font-mono ${isOtherOnline || room.type === "group" ? "text-primary" : "text-muted-foreground"}`}>
-            {getStatusText()}
-          </p>
-        </div>
+                )}
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-foreground font-mono">{roomName}</h3>
+              <p className={`text-[10px] font-mono ${room.type === "group" ? "text-primary" : "text-muted-foreground"}`}>
+                {getStatusText()}
+              </p>
+            </div>
+          </>
+        )}
         {/* Call buttons — DM (non-bot) OR group chats */}
         {((room.type === "dm" && !isBot && (callTargetUserId || otherUserId)) || room.type === "group") && (
           <>
