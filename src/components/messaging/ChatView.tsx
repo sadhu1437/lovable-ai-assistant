@@ -436,6 +436,8 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           onToggleVideo={webrtc.toggleVideo}
           onEndCall={() => webrtc.endCall()}
           onFlipCamera={webrtc.callType === "video" ? webrtc.flipCamera : undefined}
+          onToggleScreenShare={webrtc.callType === "video" ? webrtc.toggleScreenShare : undefined}
+          isScreenSharing={webrtc.isScreenSharing}
         />
       )}
 

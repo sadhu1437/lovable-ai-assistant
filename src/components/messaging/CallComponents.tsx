@@ -7,6 +7,8 @@ import {
   Mic,
   MicOff,
   SwitchCamera,
+  MonitorUp,
+  MonitorOff,
 } from "lucide-react";
 import type { CallStatus, CallType } from "@/hooks/useWebRTC";
 import type { UserProfile } from "@/lib/messaging";
@@ -96,6 +98,8 @@ interface CallScreenProps {
   onToggleVideo: () => void;
   onEndCall: () => void;
   onFlipCamera?: () => void;
+  onToggleScreenShare?: () => void;
+  isScreenSharing?: boolean;
 }
 
 function formatDuration(seconds: number) {
@@ -118,6 +122,8 @@ export function CallScreen({
   onToggleVideo,
   onEndCall,
   onFlipCamera,
+  onToggleScreenShare,
+  isScreenSharing = false,
 }: CallScreenProps) {
   const name = remoteProfile?.display_name || remoteProfile?.username || "Unknown";
   const avatar = remoteProfile?.avatar_url;
@@ -235,6 +241,21 @@ export function CallScreen({
               </button>
             )}
           </>
+        )}
+
+        {/* Screen share (video calls only) */}
+        {callType === "video" && onToggleScreenShare && (
+          <button
+            onClick={onToggleScreenShare}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+              isScreenSharing
+                ? "bg-primary/20 text-primary"
+                : "bg-secondary text-foreground hover:bg-secondary/80"
+            }`}
+            title={isScreenSharing ? "Stop sharing" : "Share screen"}
+          >
+            {isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <MonitorUp className="w-5 h-5" />}
+          </button>
         )}
 
         {/* End call */}
