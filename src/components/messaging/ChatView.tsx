@@ -126,7 +126,6 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const handleAcceptCall = async () => {
     if (!incomingCall) return;
     try {
-      webrtc.setRemoteUserId?.(incomingCall.callerId);
       await webrtc.answerCall(incomingCall.id, incomingCall.callType);
       setIncomingCall(null);
     } catch {
