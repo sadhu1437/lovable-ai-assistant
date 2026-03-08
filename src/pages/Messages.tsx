@@ -32,6 +32,7 @@ export default function Messages() {
   const [roomProfiles, setRoomProfiles] = useState<Record<string, UserProfile>>({});
   const [dialogMode, setDialogMode] = useState<"dm" | "group" | null>(null);
   const [loading, setLoading] = useState(true);
+  const [botLoading, setBotLoading] = useState(false);
   const profilesRef = useRef(profiles);
   profilesRef.current = profiles;
 
