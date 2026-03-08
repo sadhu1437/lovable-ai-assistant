@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "sonner";
+import { audioCache } from "@/lib/audioCache";
 
 export const ELEVENLABS_VOICES = [
   { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", gender: "Male" },
@@ -48,6 +49,17 @@ async function fetchTTSAudio(text: string, voiceId: string, signal?: AbortSignal
   return response.blob();
 }
 
+/** Get or fetch audio blob, using the global LRU cache */
+async function getCachedAudio(text: string, voiceId: string, signal?: AbortSignal): Promise<Blob> {
+  const cacheKey = `tts:${voiceId}:${text}`;
+  const cached = audioCache.get(cacheKey);
+  if (cached) return cached;
+
+  const blob = await fetchTTSAudio(text, voiceId, signal);
+  audioCache.set(cacheKey, blob);
+  return blob;
+}
+
 export function useElevenLabsTTS() {
   const [voiceId, setVoiceId] = useState<string>(ELEVENLABS_VOICES[0].id);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -66,7 +78,6 @@ export function useElevenLabsTTS() {
     setPlayingId(null);
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
@@ -86,7 +97,7 @@ export function useElevenLabsTTS() {
     abortRef.current = controller;
     setLoadingId(msgId);
     try {
-      const blob = await fetchTTSAudio(clean, voiceId, controller.signal);
+      const blob = await getCachedAudio(clean, voiceId, controller.signal);
       if (controller.signal.aborted) return;
       const url = URL.createObjectURL(blob);
       urlRef.current = url;
@@ -112,7 +123,7 @@ export function useElevenLabsTTS() {
     abortRef.current = controller;
     setLoadingId(msgId);
     try {
-      const blob = await fetchTTSAudio(clean, voiceId, controller.signal);
+      const blob = await getCachedAudio(clean, voiceId, controller.signal);
       if (controller.signal.aborted) return;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
