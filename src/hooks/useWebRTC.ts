@@ -681,6 +681,41 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     }
   }, [isScreenSharing, facingMode]);
 
+  // Monitor connection quality via RTCPeerConnection stats
+  useEffect(() => {
+    if (callStatus !== "active") {
+      setConnectionQuality("unknown");
+      return;
+    }
+    const interval = setInterval(async () => {
+      const pc = pcRef.current || groupPcsRef.current.values().next().value;
+      if (!pc) return;
+      try {
+        const stats = await pc.getStats();
+        let rtt: number | null = null;
+        let packetsLost = 0;
+        let packetsReceived = 0;
+        stats.forEach((report) => {
+          if (report.type === "candidate-pair" && report.state === "succeeded") {
+            rtt = report.currentRoundTripTime;
+          }
+          if (report.type === "inbound-rtp" && report.kind === "audio") {
+            packetsLost = report.packetsLost || 0;
+            packetsReceived = report.packetsReceived || 0;
+          }
+        });
+        const lossRate = packetsReceived > 0 ? packetsLost / (packetsLost + packetsReceived) : 0;
+        if (rtt !== null) {
+          if (rtt < 0.1 && lossRate < 0.01) setConnectionQuality("excellent");
+          else if (rtt < 0.2 && lossRate < 0.03) setConnectionQuality("good");
+          else if (rtt < 0.4 && lossRate < 0.08) setConnectionQuality("fair");
+          else setConnectionQuality("poor");
+        }
+      } catch {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [callStatus]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => cleanup();
@@ -697,6 +732,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     isGroupCall,
     participantCount,
     isScreenSharing,
+    connectionQuality,
     localVideoRef,
     remoteVideoRef,
     remoteStream: remoteStreamRef.current,
