@@ -339,86 +339,68 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                   )}
                   {/* Actions - appears on hover */}
                   {editingMsgId !== msg.id && (
-                    <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 md:opacity-100 transition-opacity`}>
+                    <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity`}>
                       <ReactionPicker
                         onSelect={(emoji) => toggleReaction(msg.id, emoji)}
                         align={isMe ? "right" : "left"}
                       />
-                      {isMe && canEditMsg(msg) && msg.message_type === "text" && (
-                        <button
-                          onClick={() => startEditMsg(msg)}
-                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                          title="Edit message"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handlePinMessage(msg)}
-                        className={`p-1 rounded transition-colors ${msg.pinned_at ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
-                        title={msg.pinned_at ? "Unpin" : "Pin message"}
-                      >
-                        {msg.pinned_at ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
-                      </button>
-                      {msg.message_type === "text" && msg.content && (
-                        <button
-                          onClick={() => elevenLabs.play(msg.content || "", msg.id)}
-                          disabled={elevenLabs.loadingId === msg.id}
-                          className={`p-1 rounded transition-colors ${elevenLabs.playingId === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
-                          title={elevenLabs.playingId === msg.id ? "Stop" : "Play with AI voice"}
-                        >
-                          {elevenLabs.loadingId === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : elevenLabs.playingId === msg.id ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                        </button>
-                      )}
-                      {msg.message_type === "text" && msg.content && (
-                        <button
-                          onClick={() => speak(msg.content || "", msg.id)}
-                          className={`p-1 rounded transition-colors ${speaking === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
-                          title={speaking === msg.id ? "Stop browser TTS" : "Read aloud (browser)"}
-                        >
-                          {speaking === msg.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                        </button>
-                      )}
-                      {msg.message_type === "text" && msg.content && (
-                        <button
-                          onClick={() => elevenLabs.download(msg.content || "", msg.id)}
-                          disabled={elevenLabs.loadingId === msg.id}
-                          className={`p-1 rounded transition-colors ${elevenLabs.loadingId === msg.id ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
-                          title="Download as audio"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {msg.message_type === "text" && msg.content && (
-                        <button
-                          onClick={() => exportMessageAsPdf({
-                            content: msg.content || "",
-                            sender: getDisplayName(msg.sender_id),
-                            timestamp: format(new Date(msg.created_at), "HH:mm"),
-                            role: isMe ? "user" : "assistant",
-                          })}
-                          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                          title="Export as PDF"
-                        >
-                          <FileDown className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setForwardMsg(msg)}
-                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                        title="Forward"
-                      >
-                        <Forward className="w-3.5 h-3.5" />
-                      </button>
-                      {isMe && (
-                        <button
-                          onClick={() => setDeleteMsg(msg)}
-                          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                            title="More actions"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align={isMe ? "end" : "start"} className="min-w-[160px]">
+                          {isMe && canEditMsg(msg) && msg.message_type === "text" && (
+                            <DropdownMenuItem onClick={() => startEditMsg(msg)}>
+                              <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => handlePinMessage(msg)}>
+                            {msg.pinned_at ? <PinOff className="w-3.5 h-3.5 mr-2" /> : <Pin className="w-3.5 h-3.5 mr-2" />}
+                            {msg.pinned_at ? "Unpin" : "Pin"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setForwardMsg(msg)}>
+                            <Forward className="w-3.5 h-3.5 mr-2" /> Forward
+                          </DropdownMenuItem>
+                          {msg.message_type === "text" && msg.content && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => elevenLabs.play(msg.content || "", msg.id)} disabled={elevenLabs.loadingId === msg.id}>
+                                {elevenLabs.loadingId === msg.id ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : elevenLabs.playingId === msg.id ? <Square className="w-3.5 h-3.5 mr-2" /> : <Play className="w-3.5 h-3.5 mr-2" />}
+                                {elevenLabs.playingId === msg.id ? "Stop AI Voice" : "Play AI Voice"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => speak(msg.content || "", msg.id)}>
+                                {speaking === msg.id ? <VolumeX className="w-3.5 h-3.5 mr-2" /> : <Volume2 className="w-3.5 h-3.5 mr-2" />}
+                                {speaking === msg.id ? "Stop Reading" : "Read Aloud"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => elevenLabs.download(msg.content || "", msg.id)} disabled={elevenLabs.loadingId === msg.id}>
+                                <Download className="w-3.5 h-3.5 mr-2" /> Download Audio
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => exportMessageAsPdf({
+                                content: msg.content || "",
+                                sender: getDisplayName(msg.sender_id),
+                                timestamp: format(new Date(msg.created_at), "HH:mm"),
+                                role: isMe ? "user" : "assistant",
+                              })}>
+                                <FileDown className="w-3.5 h-3.5 mr-2" /> Export as PDF
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {isMe && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setDeleteMsg(msg)} className="text-destructive focus:text-destructive">
+                                <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                     </div>
                   )}
                 </div>
