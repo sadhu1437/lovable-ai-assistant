@@ -35,10 +35,10 @@ export default function UserProfile() {
   const [bioDraft, setBioDraft] = useState("");
   const [startingDM, setStartingDM] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const onlineUsers = usePresence(user?.id);
+  const presence = usePresence(user?.id, null);
 
   const isMe = user?.id === userId;
-  const isOnline = userId ? onlineUsers.has(userId) : false;
+  const isOnline = userId ? presence.onlineUsers.has(userId) : false;
 
   useEffect(() => {
     if (!userId) return;
