@@ -41,14 +41,20 @@ export async function loadMessages(conversationId: string): Promise<Message[]> {
     if (bmarks) bmarks.forEach((b: any) => bookmarkedIds.add(b.message_id));
   }
 
-  return (data || []).map((m: any) => ({
-    id: m.id,
-    role: m.role as "user" | "assistant",
-    content: m.content,
-    timestamp: new Date(m.created_at),
-    editedAt: m.edited_at ? new Date(m.edited_at) : null,
-    bookmarked: bookmarkedIds.has(m.id),
-  }));
+  return (data || []).map((m: any) => {
+    const meta = m.metadata || {};
+    return {
+      id: m.id,
+      role: m.role as "user" | "assistant",
+      content: m.content,
+      images: meta.images || undefined,
+      videoUrl: meta.videoUrl || undefined,
+      codeContent: meta.codeContent || undefined,
+      timestamp: new Date(m.created_at),
+      editedAt: m.edited_at ? new Date(m.edited_at) : null,
+      bookmarked: bookmarkedIds.has(m.id),
+    };
+  });
 }
 
 export async function createConversation(userId: string, title: string, category: string): Promise<string> {
@@ -62,10 +68,19 @@ export async function createConversation(userId: string, title: string, category
   return data.id;
 }
 
-export async function saveMessage(conversationId: string, role: string, content: string): Promise<string> {
+export async function saveMessage(
+  conversationId: string,
+  role: string,
+  content: string,
+  metadata?: { images?: string[]; videoUrl?: string; codeContent?: string }
+): Promise<string> {
+  const row: any = { conversation_id: conversationId, role, content };
+  if (metadata && Object.keys(metadata).length > 0) {
+    row.metadata = metadata;
+  }
   const { data, error } = await supabase
     .from("messages")
-    .insert({ conversation_id: conversationId, role, content })
+    .insert(row)
     .select("id")
     .single();
 

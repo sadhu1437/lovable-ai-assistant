@@ -194,7 +194,7 @@ const Index = () => {
           setIsLoading(false);
           if (user) {
             try {
-              const dbId = await saveMessage(convId!, "assistant", text);
+              const dbId = await saveMessage(convId!, "assistant", text, { images });
               setConversations((prev) =>
                 prev.map((c) =>
                   c.id === convId
@@ -249,7 +249,7 @@ const Index = () => {
             const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
             if (assistantMsg) {
               try {
-                const dbId = await saveMessage(convId!, "assistant", assistantMsg.content);
+                const dbId = await saveMessage(convId!, "assistant", assistantMsg.content, { codeContent: assistantMsg.codeContent });
                 setConversations((prev) =>
                   prev.map((c) =>
                     c.id === convId
@@ -290,7 +290,7 @@ const Index = () => {
           setIsLoading(false);
           if (user) {
             try {
-              const dbId = await saveMessage(convId!, "assistant", text);
+              const dbId = await saveMessage(convId!, "assistant", text, { videoUrl: videoUrl || undefined });
               setConversations((prev) =>
                 prev.map((c) =>
                   c.id === convId
@@ -470,7 +470,7 @@ const Index = () => {
         if (user) {
           try {
             await saveMessage(convId, "user", userMsg.content);
-            await saveMessage(convId, "assistant", text);
+            await saveMessage(convId, "assistant", text, { images });
           } catch { /* non-critical */ }
         }
       },
