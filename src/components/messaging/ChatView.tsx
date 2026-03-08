@@ -15,6 +15,7 @@ import { VoicePlayer } from "./VoicePlayer";
 import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
 import { ReplyPreview, QuotedMessage } from "./ReplyPreview";
 import { GroupInfoPanel } from "./GroupInfoPanel";
+import { ProfileCard } from "./ProfileCard";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
