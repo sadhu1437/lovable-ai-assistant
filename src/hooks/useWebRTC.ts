@@ -539,6 +539,71 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     }
   }, []);
 
+  // Flip camera (front/back)
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const flipCamera = useCallback(async () => {
+    if (!localStreamRef.current) return;
+    const newFacing = facingMode === "user" ? "environment" : "user";
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: { facingMode: { exact: newFacing }, width: 640, height: 480 },
+      });
+      // Replace video track in all peer connections
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+      
+      // Replace in 1:1 peer connection
+      if (pcRef.current) {
+        const sender = pcRef.current.getSenders().find(s => s.track?.kind === "video");
+        if (sender) await sender.replaceTrack(newVideoTrack);
+      }
+      // Replace in group peer connections
+      groupPcsRef.current.forEach(async (pc) => {
+        const sender = pc.getSenders().find(s => s.track?.kind === "video");
+        if (sender) await sender.replaceTrack(newVideoTrack);
+      });
+
+      // Stop old track and update local stream
+      if (oldVideoTrack) oldVideoTrack.stop();
+      localStreamRef.current.removeTrack(oldVideoTrack);
+      localStreamRef.current.addTrack(newVideoTrack);
+      
+      // Also keep audio from new stream
+      const newAudioTrack = newStream.getAudioTracks()[0];
+      if (newAudioTrack) newAudioTrack.stop(); // we don't need a second audio
+
+      if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
+      setFacingMode(newFacing);
+    } catch (err) {
+      console.error("flipCamera error:", err);
+      // Fallback: device may not support exact facingMode, try without exact
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: newFacing, width: 640, height: 480 },
+        });
+        const newVideoTrack = newStream.getVideoTracks()[0];
+        const oldVideoTrack = localStreamRef.current!.getVideoTracks()[0];
+        if (pcRef.current) {
+          const sender = pcRef.current.getSenders().find(s => s.track?.kind === "video");
+          if (sender) await sender.replaceTrack(newVideoTrack);
+        }
+        groupPcsRef.current.forEach(async (pc) => {
+          const sender = pc.getSenders().find(s => s.track?.kind === "video");
+          if (sender) await sender.replaceTrack(newVideoTrack);
+        });
+        if (oldVideoTrack) oldVideoTrack.stop();
+        localStreamRef.current!.removeTrack(oldVideoTrack);
+        localStreamRef.current!.addTrack(newVideoTrack);
+        if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
+        setFacingMode(newFacing);
+      } catch {
+        // Device doesn't have multiple cameras
+      }
+    }
+  }, [facingMode]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => cleanup();
@@ -565,5 +630,6 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     rejectCall,
     toggleMute,
     toggleVideo,
+    flipCamera,
   };
 }

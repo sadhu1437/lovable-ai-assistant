@@ -435,6 +435,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           onToggleMute={webrtc.toggleMute}
           onToggleVideo={webrtc.toggleVideo}
           onEndCall={() => webrtc.endCall()}
+          onFlipCamera={webrtc.callType === "video" ? webrtc.flipCamera : undefined}
         />
       )}
 

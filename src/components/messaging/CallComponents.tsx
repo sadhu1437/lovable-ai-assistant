@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import {
   Phone,
   PhoneOff,
@@ -6,13 +6,11 @@ import {
   VideoOff,
   Mic,
   MicOff,
-  X,
-  Minimize2,
-  Maximize2,
+  SwitchCamera,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { CallStatus, CallType } from "@/hooks/useWebRTC";
 import type { UserProfile } from "@/lib/messaging";
+import { playRingtone, playDialTone, playCallEnd, stopAllSounds } from "@/lib/callSounds";
 
 /* ─── Incoming Call Ring ─── */
 interface IncomingCallDialogProps {
@@ -25,6 +23,12 @@ interface IncomingCallDialogProps {
 export function IncomingCallDialog({ callerProfile, callType, onAccept, onReject }: IncomingCallDialogProps) {
   const name = callerProfile?.display_name || callerProfile?.username || "Unknown";
   const avatar = callerProfile?.avatar_url;
+
+  // Play ringtone on mount
+  useEffect(() => {
+    playRingtone();
+    return () => stopAllSounds();
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center">
@@ -60,13 +64,13 @@ export function IncomingCallDialog({ callerProfile, callType, onAccept, onReject
         {/* Actions */}
         <div className="flex items-center gap-6">
           <button
-            onClick={onReject}
+            onClick={() => { stopAllSounds(); onReject(); }}
             className="w-14 h-14 rounded-full bg-destructive flex items-center justify-center text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-lg"
           >
             <PhoneOff className="w-6 h-6" />
           </button>
           <button
-            onClick={onAccept}
+            onClick={() => { stopAllSounds(); onAccept(); }}
             className="w-14 h-14 rounded-full bg-green-500 flex items-center justify-center text-white hover:bg-green-600 transition-colors shadow-lg animate-bounce"
           >
             <Phone className="w-6 h-6" />
@@ -91,6 +95,7 @@ interface CallScreenProps {
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onEndCall: () => void;
+  onFlipCamera?: () => void;
 }
 
 function formatDuration(seconds: number) {
@@ -112,9 +117,23 @@ export function CallScreen({
   onToggleMute,
   onToggleVideo,
   onEndCall,
+  onFlipCamera,
 }: CallScreenProps) {
   const name = remoteProfile?.display_name || remoteProfile?.username || "Unknown";
   const avatar = remoteProfile?.avatar_url;
+
+  // Play dial tone when calling, stop when connected or ended
+  useEffect(() => {
+    if (callStatus === "calling") {
+      playDialTone();
+    } else {
+      stopAllSounds();
+    }
+    if (callStatus === "ended") {
+      playCallEnd();
+    }
+    return () => stopAllSounds();
+  }, [callStatus]);
 
   // Attach remote stream to video element
   useEffect(() => {
@@ -192,22 +211,35 @@ export function CallScreen({
 
         {/* Toggle video (only for video calls) */}
         {callType === "video" && (
-          <button
-            onClick={onToggleVideo}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-              isVideoOff
-                ? "bg-destructive/20 text-destructive"
-                : "bg-secondary text-foreground hover:bg-secondary/80"
-            }`}
-            title={isVideoOff ? "Turn on camera" : "Turn off camera"}
-          >
-            {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
-          </button>
+          <>
+            <button
+              onClick={onToggleVideo}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                isVideoOff
+                  ? "bg-destructive/20 text-destructive"
+                  : "bg-secondary text-foreground hover:bg-secondary/80"
+              }`}
+              title={isVideoOff ? "Turn on camera" : "Turn off camera"}
+            >
+              {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+            </button>
+
+            {/* Flip camera (front/back) */}
+            {onFlipCamera && (
+              <button
+                onClick={onFlipCamera}
+                className="w-12 h-12 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                title="Switch camera"
+              >
+                <SwitchCamera className="w-5 h-5" />
+              </button>
+            )}
+          </>
         )}
 
         {/* End call */}
         <button
-          onClick={onEndCall}
+          onClick={() => { stopAllSounds(); onEndCall(); }}
           className="w-14 h-14 rounded-full bg-destructive flex items-center justify-center text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-lg"
           title="End call"
         >
