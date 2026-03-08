@@ -156,9 +156,9 @@ function CacheStatsPanel() {
             : null;
           return (
             <div key={s.label} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground font-mono">{s.label}</p>
-                <span className="text-xs text-muted-foreground font-mono">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                <p className="text-sm font-medium text-foreground font-mono truncate">{s.label}</p>
+                <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">
                   {s.entries} items • {formatBytes(s.bytesUsed)} / {formatBytes(s.maxBytes)}
                 </span>
               </div>
@@ -205,7 +205,7 @@ function CacheStatsPanel() {
           );
         })}
 
-        <div className="pt-2 flex items-center justify-between border-t border-border">
+        <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground">
               Total: {formatBytes(stats.reduce((a, s) => a + s.bytesUsed, 0))} in memory
@@ -341,7 +341,7 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="bg-secondary border border-border">
+          <TabsList className="bg-secondary border border-border w-full overflow-x-auto flex-nowrap justify-start sm:justify-center">
             <TabsTrigger value="profile" className="gap-1.5 font-mono text-xs">
               <User className="w-3.5 h-3.5" /> Profile
             </TabsTrigger>
