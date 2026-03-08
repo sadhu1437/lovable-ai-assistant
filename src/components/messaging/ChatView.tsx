@@ -199,6 +199,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             {getStatusText()}
           </p>
         </div>
+        <VoiceSelector value={elevenLabs.voiceId} onChange={elevenLabs.setVoiceId} />
         {messages.length > 0 && (
           <Button
             variant="ghost"
