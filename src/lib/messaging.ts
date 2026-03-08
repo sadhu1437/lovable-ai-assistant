@@ -23,7 +23,7 @@ export interface ChatMessage {
   room_id: string;
   sender_id: string;
   content: string | null;
-  message_type: "text" | "image" | "file";
+  message_type: "text" | "image" | "file" | "voice";
   media_url: string | null;
   created_at: string;
 }
@@ -114,7 +114,7 @@ export async function sendMessage(
   roomId: string,
   senderId: string,
   content: string,
-  messageType: "text" | "image" | "file" = "text",
+  messageType: "text" | "image" | "file" | "voice" = "text",
   mediaUrl?: string
 ) {
   return supabase.from("chat_messages").insert({
