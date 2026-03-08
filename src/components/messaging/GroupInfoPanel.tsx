@@ -273,27 +273,40 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                           )}
                         </div>
 
-                        {/* Admin actions */}
-                        {isAdmin && !isCurrentUser && (
+                        {/* Actions */}
+                        {!isCurrentUser && (
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                            <button
-                              onClick={() => toggleRole({ member, profile })}
-                              className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                              title={isAdminMember ? "Remove admin" : "Make admin"}
-                            >
-                              {isAdminMember ? (
-                                <ChevronDown className="w-3.5 h-3.5" />
-                              ) : (
-                                <Crown className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => setRemoveTarget({ member, profile })}
-                              className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                              title="Remove from group"
-                            >
-                              <UserMinus className="w-3.5 h-3.5" />
-                            </button>
+                            {onStartDM && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onStartDM(member.user_id); setOpen(false); }}
+                                className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                                title="Send message"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {isAdmin && (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleRole({ member, profile }); }}
+                                  className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                                  title={isAdminMember ? "Remove admin" : "Make admin"}
+                                >
+                                  {isAdminMember ? (
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <Crown className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setRemoveTarget({ member, profile }); }}
+                                  className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                  title="Remove from group"
+                                >
+                                  <UserMinus className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
