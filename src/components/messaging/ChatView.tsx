@@ -54,6 +54,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
+  const { speaking, speak } = useTextToSpeech();
 
   // Load reactions when messages change
   useEffect(() => {
@@ -249,6 +250,29 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                       onSelect={(emoji) => toggleReaction(msg.id, emoji)}
                       align={isMe ? "right" : "left"}
                     />
+                    {msg.message_type === "text" && msg.content && (
+                      <button
+                        onClick={() => speak(msg.content || "", msg.id)}
+                        className={`p-1 rounded transition-colors ${speaking === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                        title={speaking === msg.id ? "Stop" : "Read aloud"}
+                      >
+                        {speaking === msg.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                    {msg.message_type === "text" && msg.content && (
+                      <button
+                        onClick={() => exportMessageAsPdf({
+                          content: msg.content || "",
+                          sender: getDisplayName(msg.sender_id),
+                          timestamp: format(new Date(msg.created_at), "HH:mm"),
+                          role: isMe ? "user" : "assistant",
+                        })}
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Export as PDF"
+                      >
+                        <FileDown className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => setForwardMsg(msg)}
                       className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
