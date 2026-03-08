@@ -4,6 +4,8 @@ import type { Conversation } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
 import { useTheme } from "@/hooks/useTheme";
 import { prefetchRoute } from "@/lib/routePrefetch";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { useNotificationContext } from "@/hooks/useNotificationContext";
 
 interface ChatSidebarProps {
   conversations: Conversation[];
