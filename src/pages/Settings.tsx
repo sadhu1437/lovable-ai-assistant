@@ -205,7 +205,7 @@ function CacheStatsPanel() {
           );
         })}
 
-        <div className="pt-2 flex items-center justify-between border-t border-border">
+        <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground">
               Total: {formatBytes(stats.reduce((a, s) => a + s.bytesUsed, 0))} in memory
