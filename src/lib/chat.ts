@@ -4,6 +4,7 @@ export type Message = {
   content: string;
   images?: string[];
   videoUrl?: string;
+  codeContent?: string;
   filePreview?: { name: string; type: string; isImage: boolean; dataUrl?: string };
   timestamp: Date;
 };
