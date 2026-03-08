@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Loader2, Mic, MicOff } from "lucide-react";
 import { categories } from "@/lib/chat";
+import { toast } from "sonner";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -11,7 +12,9 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, isLoading, category, onCategoryChange }: ChatInputProps) {
   const [input, setInput] = useState("");
+  const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -32,6 +35,65 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange }: Cha
       handleSubmit();
     }
   };
+
+  const toggleVoice = useCallback(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Speech recognition is not supported in your browser");
+      return;
+    }
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognitionRef.current = recognition;
+
+    let finalTranscript = "";
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + " ";
+        } else {
+          interim = transcript;
+        }
+      }
+      setInput(finalTranscript + interim);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error !== "aborted") {
+        toast.error("Voice input error: " + event.error);
+      }
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+    setIsListening(true);
+  }, [isListening]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
 
   return (
     <div className="border-t border-border bg-background/80 backdrop-blur-xl">
@@ -54,16 +116,35 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange }: Cha
         </div>
 
         {/* Input area */}
-        <div className="relative flex items-end gap-2 bg-card border border-border rounded-xl p-2 focus-within:border-primary/50 focus-within:glow-primary transition-all">
+        <div className={`relative flex items-end gap-2 bg-card border rounded-xl p-2 transition-all ${
+          isListening
+            ? "border-primary glow-primary"
+            : "border-border focus-within:border-primary/50 focus-within:glow-primary"
+        }`}>
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask NexusAI anything..."
+            placeholder={isListening ? "Listening..." : "Ask NexusAI anything..."}
             rows={1}
             className="flex-1 bg-transparent resize-none text-foreground placeholder:text-muted-foreground outline-none px-2 py-1.5 text-sm max-h-[200px]"
           />
+
+          {/* Voice button */}
+          <button
+            onClick={toggleVoice}
+            className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+              isListening
+                ? "bg-primary text-primary-foreground animate-pulse"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
+            title={isListening ? "Stop listening" : "Voice input"}
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+
+          {/* Send button */}
           <button
             onClick={handleSubmit}
             disabled={!input.trim() || isLoading}
