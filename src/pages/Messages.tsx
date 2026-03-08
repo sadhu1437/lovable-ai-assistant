@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { RoomList } from "@/components/messaging/RoomList";
+import { MessageSearch } from "@/components/messaging/MessageSearch";
 import { ChatView } from "@/components/messaging/ChatView";
 import { NewChatDialog } from "@/components/messaging/NewChatDialog";
 import { usePresence, useReadReceipts } from "@/hooks/usePresence";
@@ -127,7 +128,12 @@ export default function Messages() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <span className="text-sm font-semibold text-foreground font-mono">Messages</span>
+          <span className="text-sm font-semibold text-foreground font-mono flex-1">Messages</span>
+          <MessageSearch
+            rooms={rooms}
+            roomProfiles={roomProfiles}
+            onJumpToMessage={(roomId) => setActiveRoomId(roomId)}
+          />
         </div>
         <RoomList
           rooms={rooms}
