@@ -80,6 +80,65 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
   const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
   const { speaking, speak } = useTextToSpeech();
+
+  // WebRTC calling
+  const webrtc = useWebRTC({ currentUserId });
+  const [incomingCall, setIncomingCall] = useState<{ id: string; callerId: string; callType: CallType } | null>(null);
+
+  // Listen for incoming calls
+  useEffect(() => {
+    if (!currentUserId) return;
+    const channel = supabase
+      .channel("incoming-calls")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "calls", filter: `callee_id=eq.${currentUserId}` },
+        (payload) => {
+          const call = payload.new as any;
+          if (call.status === "ringing") {
+            setIncomingCall({ id: call.id, callerId: call.caller_id, callType: call.call_type });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "calls", filter: `callee_id=eq.${currentUserId}` },
+        (payload) => {
+          const call = payload.new as any;
+          if (["ended", "missed", "rejected"].includes(call.status) && incomingCall?.id === call.id) {
+            setIncomingCall(null);
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUserId, incomingCall?.id]);
+
+  const handleStartCall = async (type: CallType) => {
+    if (!otherUserId || isBot) return;
+    try {
+      await webrtc.startCall(room.id, otherUserId, type);
+    } catch {
+      toast.error("Failed to start call. Check microphone/camera permissions.");
+    }
+  };
+
+  const handleAcceptCall = async () => {
+    if (!incomingCall) return;
+    try {
+      webrtc.setRemoteUserId?.(incomingCall.callerId);
+      await webrtc.answerCall(incomingCall.id, incomingCall.callType);
+      setIncomingCall(null);
+    } catch {
+      toast.error("Failed to answer call");
+    }
+  };
+
+  const handleRejectCall = async () => {
+    if (!incomingCall) return;
+    await webrtc.rejectCall(incomingCall.id);
+    setIncomingCall(null);
+  };
   const elevenLabs = useElevenLabsTTS();
 
   // Load reactions when messages change
