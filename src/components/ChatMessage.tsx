@@ -365,8 +365,25 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                 />
               )}
 
+              {message.editedAt && (
+                <p className="text-[10px] text-muted-foreground italic mt-1">(edited)</p>
+              )}
+
               {/* Action buttons */}
               <div className="flex items-center gap-1 mt-4 pt-2">
+                {onToggleBookmark && (
+                  <button
+                    onClick={() => onToggleBookmark(message.id, !message.bookmarked)}
+                    className={`p-1.5 rounded-lg transition-all ${
+                      message.bookmarked
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    }`}
+                    title={message.bookmarked ? "Remove bookmark" : "Bookmark"}
+                  >
+                    {message.bookmarked ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+                  </button>
+                )}
                 {elevenLabs && (
                   <>
                     <button
