@@ -5,7 +5,7 @@ import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
-import { streamChat, generateId, isImageRequest, generateImage } from "@/lib/chat";
+import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo } from "@/lib/chat";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ const Index = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [category, setCategory] = useState("general");
+  const [model, setModel] = useState("google/gemini-3-flash-preview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showGallery, setShowGallery] = useState(false);
   const [isEditingImage, setIsEditingImage] = useState(false);
