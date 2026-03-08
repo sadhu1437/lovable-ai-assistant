@@ -210,6 +210,10 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     return p?.display_name || p?.username || "User";
   }, [profileByUserId]);
 
+  const isBotMessage = useCallback((userId: string) => {
+    return profileByUserId[userId]?.username === BOT_USERNAME;
+  }, [profileByUserId]);
+
   const getAvatar = useCallback((userId: string) => {
     return profileByUserId[userId]?.avatar_url;
   }, [profileByUserId]);
