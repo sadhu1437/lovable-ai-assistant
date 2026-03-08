@@ -1,0 +1,1 @@
+ALTER TABLE public.chat_messages ADD COLUMN reply_to UUID REFERENCES public.chat_messages(id) ON DELETE SET NULL DEFAULT NULL;

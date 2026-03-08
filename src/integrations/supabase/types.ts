@@ -53,6 +53,7 @@ export type Database = {
           message_type: string
           pinned_at: string | null
           pinned_by: string | null
+          reply_to: string | null
           room_id: string
           sender_id: string
         }
@@ -65,6 +66,7 @@ export type Database = {
           message_type?: string
           pinned_at?: string | null
           pinned_by?: string | null
+          reply_to?: string | null
           room_id: string
           sender_id: string
         }
@@ -77,10 +79,18 @@ export type Database = {
           message_type?: string
           pinned_at?: string | null
           pinned_by?: string | null
+          reply_to?: string | null
           room_id?: string
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "chat_messages_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chat_messages_room_id_fkey"
             columns: ["room_id"]
