@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2 } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -16,6 +16,8 @@ import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
 import { useReactions } from "@/hooks/useReactions";
 import { ForwardMessageDialog } from "./ForwardMessageDialog";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { useElevenLabsTTS } from "@/hooks/useElevenLabsTTS";
+import { VoiceSelector } from "./VoiceSelector";
 import { exportMessageAsPdf, exportMessagesToPdf } from "@/lib/exportPdf";
 import {
   AlertDialog,
@@ -55,54 +57,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
   const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
   const { speaking, speak } = useTextToSpeech();
-  const [downloadingAudio, setDownloadingAudio] = useState<string | null>(null);
-
-  const handleDownloadAudio = async (text: string, msgId: string) => {
-    if (downloadingAudio) return;
-    setDownloadingAudio(msgId);
-    try {
-      const clean = text
-        .replace(/```[\s\S]*?```/g, "")
-        .replace(/`([^`]+)`/g, "$1")
-        .replace(/#{1,6}\s/g, "")
-        .replace(/\*\*([^*]+)\*\*/g, "$1")
-        .replace(/\*([^*]+)\*/g, "$1")
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-        .replace(/!\[.*?\]\(.*?\)/g, "")
-        .replace(/---/g, "")
-        .trim();
-      if (!clean) { toast.error("Nothing to convert"); return; }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: clean }),
-        }
-      );
-      if (!response.ok) throw new Error("TTS failed");
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `message-${msgId.slice(0, 8)}.mp3`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("Audio downloaded!");
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to generate audio");
-    } finally {
-      setDownloadingAudio(null);
-    }
-  };
+  const elevenLabs = useElevenLabsTTS();
 
   // Load reactions when messages change
   useEffect(() => {
