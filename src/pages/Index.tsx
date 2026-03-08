@@ -19,6 +19,8 @@ import {
   loadMessages,
   createConversation as dbCreateConversation,
   saveMessage,
+  updateMessageContent,
+  toggleBookmark,
   deleteConversation as dbDeleteConversation,
   togglePinConversation,
 } from "@/lib/db";
