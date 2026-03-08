@@ -29,7 +29,7 @@ interface RoomListProps {
   mentionCounts?: Record<string, number>;
 }
 
-export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, onChatWithBot, onDeleteRoom, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
+export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, onChatWithBot, onDeleteRoom, roomProfiles, currentUserId, onlineUsers, mentionCounts = {} }: RoomListProps) {
   const [search, setSearch] = useState("");
   const [deleteRoom, setDeleteRoom] = useState<ChatRoom | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
