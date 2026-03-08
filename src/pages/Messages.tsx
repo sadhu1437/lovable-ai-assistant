@@ -14,6 +14,8 @@ import {
   fetchUserRooms,
   fetchRoomMessages,
   fetchRoomMembers,
+  fetchProfilesByUserIds,
+  fetchProfileByUserId,
   createBotDM,
   type ChatRoom,
   type ChatMessage,
@@ -36,10 +38,10 @@ export default function Messages() {
   const { onlineUsers, typingUsers, setTyping } = usePresence(user?.id, activeRoomId);
   const { readBy } = useReadReceipts(activeRoomId, user?.id, messages);
 
-  // Load rooms — batch profile fetching instead of N+1
+  // Load rooms — batch profile fetching with cache
   const loadRooms = useCallback(async () => {
     if (!user) return;
-    const data = await fetchUserRooms();
+    const data = await fetchUserRooms(user.id);
     setRooms(data);
 
     const dmRooms = data.filter((r) => r.type === "dm");
@@ -64,22 +66,17 @@ export default function Messages() {
 
     if (otherUserIds.size === 0) { setLoading(false); return; }
 
-    // Single batch query for all profiles
-    const { data: profilesData } = await supabase
-      .from("profiles")
-      .select("id, user_id, username, display_name, avatar_url")
-      .in("user_id", Array.from(otherUserIds));
+    // Cached batch profile fetch
+    const profilesList = await fetchProfilesByUserIds(Array.from(otherUserIds));
 
     const profileMap: Record<string, UserProfile> = {};
-    if (profilesData) {
-      const profileByUserId: Record<string, UserProfile> = {};
-      for (const p of profilesData) {
-        profileByUserId[p.user_id] = p as UserProfile;
-      }
-      for (const [roomId, userId] of Object.entries(roomToOtherUser)) {
-        if (profileByUserId[userId]) {
-          profileMap[roomId] = profileByUserId[userId];
-        }
+    const profileByUserId: Record<string, UserProfile> = {};
+    for (const p of profilesList) {
+      profileByUserId[p.user_id] = p;
+    }
+    for (const [roomId, userId] of Object.entries(roomToOtherUser)) {
+      if (profileByUserId[userId]) {
+        profileMap[roomId] = profileByUserId[userId];
       }
     }
 
