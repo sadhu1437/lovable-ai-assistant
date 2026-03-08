@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Clock, MessageSquare, Camera, Loader2, Pencil, Check, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { User, Clock, MessageSquare, Camera, Loader2, Pencil, Check, X, ExternalLink } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { OnlineIndicator } from "./OnlineIndicator";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +33,7 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusDraft, setStatusDraft] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!open || !userId) return;
@@ -210,16 +212,25 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
                 </div>
               </div>
 
-              {/* Action */}
-              {!isMe && onStartDM && (
+              {/* Actions */}
+              <div className="flex flex-col gap-1.5">
+                {!isMe && onStartDM && (
+                  <button
+                    onClick={() => { onStartDM(userId); setOpen(false); }}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-mono font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Send Message
+                  </button>
+                )}
                 <button
-                  onClick={() => { onStartDM(userId); setOpen(false); }}
-                  className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-mono font-medium hover:bg-primary/90 transition-colors"
+                  onClick={() => { setOpen(false); navigate(`/profile/${userId}`); }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-secondary text-foreground text-xs font-mono font-medium hover:bg-secondary/80 transition-colors"
                 >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  Send Message
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  View Full Profile
                 </button>
-              )}
+              </div>
             </div>
           </>
         )}
