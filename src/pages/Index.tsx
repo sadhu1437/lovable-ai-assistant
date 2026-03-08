@@ -26,6 +26,7 @@ const Index = () => {
   const [category, setCategory] = useState("general");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showGallery, setShowGallery] = useState(false);
+  const [isEditingImage, setIsEditingImage] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const conversationsRef = useRef(conversations);
@@ -295,7 +296,12 @@ const Index = () => {
           <>
             <div className="flex-1 overflow-y-auto">
               {activeConv.messages.map((msg) => (
-                <ChatMessage key={msg.id} message={msg} />
+                <ChatMessage
+                  key={msg.id}
+                  message={msg}
+                  onEditImage={handleEditImage}
+                  isEditingImage={isEditingImage}
+                />
               ))}
               {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && <TypingIndicator />}
               <div ref={messagesEndRef} />
