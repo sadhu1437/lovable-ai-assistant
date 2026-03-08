@@ -15,7 +15,7 @@ export const ELEVENLABS_VOICES = [
   { id: "nPczCjzI2devNBz1zQrb", name: "Brian", gender: "Male" },
   { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", gender: "Male" },
   { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", gender: "Female" },
-] as const;
+];
 
 function cleanText(text: string): string {
   return text
@@ -48,7 +48,7 @@ async function fetchTTSAudio(text: string, voiceId: string): Promise<Blob> {
 }
 
 export function useElevenLabsTTS() {
-  const [voiceId, setVoiceId] = useState(ELEVENLABS_VOICES[0].id);
+  const [voiceId, setVoiceId] = useState<string>(ELEVENLABS_VOICES[0].id);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
