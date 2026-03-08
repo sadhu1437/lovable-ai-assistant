@@ -5,6 +5,7 @@ import { ChatInput, type ChatInputHandle } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
+import { CommandPalette } from "@/components/CommandPalette";
 import { streamChat, generateId, isImageRequest, isVideoRequest, isCodeRequest, generateImage, generateVideo, analyzeFile, streamCodeGenerate } from "@/lib/chat";
 import { extractFileForAnalysis } from "@/lib/fileExtraction";
 import type { Message, Conversation } from "@/lib/chat";
@@ -31,6 +32,7 @@ const Index = () => {
   const [showGallery, setShowGallery] = useState(false);
   const [isEditingImage, setIsEditingImage] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputHandle>(null);
@@ -71,6 +73,10 @@ const Index = () => {
       if (mod && e.key === '/') {
         e.preventDefault();
         chatInputRef.current?.focus();
+      }
+      if (mod && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handler);
@@ -698,7 +704,18 @@ const Index = () => {
         <div className="fixed inset-0 bg-background/60 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Main area */}
+      {/* Command Palette */}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        conversations={conversations}
+        onSelectConversation={(id) => { setActiveId(id); setShowGallery(false); setSidebarOpen(false); }}
+        onNewChat={() => { setActiveId(null); setShowGallery(false); setSidebarOpen(false); }}
+        onOpenGallery={() => { setShowGallery(true); setActiveId(null); setSidebarOpen(false); }}
+        onSignOut={signOut}
+        onFocusInput={() => chatInputRef.current?.focus()}
+      />
+
       <div className="flex-1 flex flex-col min-w-0">
         {showGallery ? (
           <ImageGallery
