@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
-import { User, MapPin, Clock, MessageSquare } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { User, Clock, MessageSquare, Camera, Loader2, Pencil, Check, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { OnlineIndicator } from "./OnlineIndicator";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface ProfileCardProps {
   userId: string;
@@ -19,6 +20,7 @@ interface FullProfile {
   avatar_url: string | null;
   bio: string | null;
   gender: string | null;
+  status_message: string | null;
   last_seen: string | null;
   created_at: string;
 }
@@ -26,12 +28,16 @@ interface FullProfile {
 export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentUserId }: ProfileCardProps) {
   const [profile, setProfile] = useState<FullProfile | null>(null);
   const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [statusDraft, setStatusDraft] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open || !userId) return;
     supabase
       .from("profiles")
-      .select("display_name, username, avatar_url, bio, gender, last_seen, created_at")
+      .select("display_name, username, avatar_url, bio, gender, status_message, last_seen, created_at")
       .eq("user_id", userId)
       .maybeSingle()
       .then(({ data }) => {
@@ -41,6 +47,39 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
 
   const isOnline = onlineUsers?.has(userId);
   const isMe = currentUserId === userId;
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !isMe) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${userId}/avatar.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) {
+      toast.error("Upload failed");
+      setUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+    const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("user_id", userId);
+    setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev);
+    toast.success("Avatar updated!");
+    setUploading(false);
+  };
+
+  const saveStatus = async () => {
+    if (!isMe) return;
+    const val = statusDraft.trim() || null;
+    await supabase.from("profiles").update({ status_message: val } as any).eq("user_id", userId);
+    setProfile((prev) => prev ? { ...prev, status_message: val } : prev);
+    setEditingStatus(false);
+    toast.success("Status updated");
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -64,14 +103,33 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
             {/* Banner + Avatar */}
             <div className="h-16 bg-gradient-to-r from-primary/30 to-accent/30 relative">
               <div className="absolute -bottom-8 left-4">
-                <div className="relative">
+                <div className="relative group/avatar">
                   <div className="w-16 h-16 rounded-full border-4 border-card bg-secondary flex items-center justify-center overflow-hidden">
-                    {profile.avatar_url ? (
+                    {uploading ? (
+                      <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+                    ) : profile.avatar_url ? (
                       <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <User className="w-7 h-7 text-muted-foreground" />
                     )}
                   </div>
+                  {/* Camera overlay for own profile */}
+                  {isMe && !uploading && (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute inset-0 rounded-full bg-background/60 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                      title="Change photo"
+                    >
+                      <Camera className="w-5 h-5 text-foreground" />
+                    </button>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
                   {isOnline !== undefined && (
                     <div className="absolute bottom-0 right-0">
                       <OnlineIndicator isOnline={!!isOnline} size="md" />
@@ -90,6 +148,42 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
                 </p>
                 {profile.username && (
                   <p className="text-xs text-muted-foreground font-mono">@{profile.username}</p>
+                )}
+              </div>
+
+              {/* Status message */}
+              <div className="min-h-[20px]">
+                {editingStatus ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      value={statusDraft}
+                      onChange={(e) => setStatusDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveStatus(); if (e.key === "Escape") setEditingStatus(false); }}
+                      placeholder="Set a status..."
+                      maxLength={80}
+                      className="flex-1 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <button onClick={saveStatus} className="p-1 rounded bg-primary text-primary-foreground"><Check className="w-3 h-3" /></button>
+                    <button onClick={() => setEditingStatus(false)} className="p-1 rounded bg-secondary text-foreground"><X className="w-3 h-3" /></button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    {profile.status_message ? (
+                      <p className="text-xs text-primary font-mono italic">💬 {profile.status_message}</p>
+                    ) : isMe ? (
+                      <p className="text-xs text-muted-foreground font-mono italic">No status set</p>
+                    ) : null}
+                    {isMe && (
+                      <button
+                        onClick={() => { setStatusDraft(profile.status_message || ""); setEditingStatus(true); }}
+                        className="p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Edit status"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -119,10 +213,7 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
               {/* Action */}
               {!isMe && onStartDM && (
                 <button
-                  onClick={() => {
-                    onStartDM(userId);
-                    setOpen(false);
-                  }}
+                  onClick={() => { onStartDM(userId); setOpen(false); }}
                   className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-mono font-medium hover:bg-primary/90 transition-colors"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
