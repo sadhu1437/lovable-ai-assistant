@@ -299,6 +299,11 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Cache Tab */}
+          <TabsContent value="cache">
+            <CacheStatsPanel />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
