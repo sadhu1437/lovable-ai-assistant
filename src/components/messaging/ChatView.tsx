@@ -14,6 +14,7 @@ import { VoiceRecorder } from "./VoiceRecorder";
 import { VoicePlayer } from "./VoicePlayer";
 import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
 import { useReactions } from "@/hooks/useReactions";
+import { ForwardMessageDialog } from "./ForwardMessageDialog";
 
 interface ChatViewProps {
   room: ChatRoom;
