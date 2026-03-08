@@ -64,9 +64,12 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   }, [setTyping]);
 
   const isBotRoom = useCallback(() => {
+    // Check both profiles (from messages) and roomProfiles (from room members)
     const other = Object.values(profiles).find((p) => p.user_id !== currentUserId);
-    return other?.username === BOT_USERNAME;
-  }, [profiles, currentUserId]);
+    if (other?.username === BOT_USERNAME) return true;
+    const roomProfile = roomProfiles[room.id];
+    return roomProfile?.username === BOT_USERNAME;
+  }, [profiles, roomProfiles, room.id, currentUserId]);
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -111,7 +114,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     return p?.avatar_url;
   };
 
-  const otherUser = Object.values(profiles).find((p) => p.user_id !== currentUserId);
+  const otherUser = Object.values(profiles).find((p) => p.user_id !== currentUserId) || roomProfiles[room.id] || null;
   const isBot = otherUser?.username === BOT_USERNAME;
   const roomName = room.type === "group" ? room.name || "Unnamed Group" : otherUser?.display_name || "Chat";
   const otherUserId = otherUser?.user_id;
