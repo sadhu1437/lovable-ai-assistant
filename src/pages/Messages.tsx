@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RoomList } from "@/components/messaging/RoomList";
 import { ChatView } from "@/components/messaging/ChatView";
 import { NewChatDialog } from "@/components/messaging/NewChatDialog";
+import { usePresence, useReadReceipts } from "@/hooks/usePresence";
 import {
   fetchUserRooms,
   fetchRoomMessages,
@@ -27,11 +28,13 @@ export default function Messages() {
   const [dialogMode, setDialogMode] = useState<"dm" | "group" | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const { onlineUsers, typingUsers, setTyping } = usePresence(user?.id, activeRoomId);
+  const { readBy } = useReadReceipts(activeRoomId, user?.id, messages);
+
   // Load rooms
   const loadRooms = useCallback(async () => {
     const data = await fetchUserRooms();
     setRooms(data);
-    // For each room, load member profiles for display
     const profileMap: Record<string, UserProfile> = {};
     for (const room of data) {
       if (room.type === "dm") {
@@ -62,7 +65,6 @@ export default function Messages() {
     const loadMessages = async () => {
       const msgs = await fetchRoomMessages(activeRoomId);
       setMessages(msgs);
-      // Load profiles for all senders
       const senderIds = [...new Set(msgs.map((m) => m.sender_id))];
       const profileMap: Record<string, UserProfile> = { ...profiles };
       for (const sid of senderIds) {
@@ -91,7 +93,6 @@ export default function Messages() {
         async (payload) => {
           const newMsg = payload.new as ChatMessage;
           setMessages((prev) => [...prev, newMsg]);
-          // Load sender profile if unknown
           if (!Object.values(profiles).find((p) => p.user_id === newMsg.sender_id)) {
             const { data } = await supabase
               .from("profiles")
@@ -121,7 +122,6 @@ export default function Messages() {
 
   return (
     <div className="h-screen flex bg-background">
-      {/* Room list - hidden on mobile when a room is active */}
       <div className={`${activeRoomId ? "hidden md:flex" : "flex"} flex-col`}>
         <div className="p-3 border-b border-border bg-card flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
@@ -137,10 +137,10 @@ export default function Messages() {
           onNewGroup={() => setDialogMode("group")}
           roomProfiles={roomProfiles}
           currentUserId={user.id}
+          onlineUsers={onlineUsers}
         />
       </div>
 
-      {/* Chat view */}
       {activeRoom ? (
         <ChatView
           room={activeRoom}
@@ -148,6 +148,10 @@ export default function Messages() {
           currentUserId={user.id}
           profiles={profiles}
           onBack={() => setActiveRoomId(null)}
+          onlineUsers={onlineUsers}
+          typingUsers={typingUsers}
+          setTyping={setTyping}
+          readBy={readBy}
         />
       ) : (
         <div className="flex-1 hidden md:flex items-center justify-center bg-background">
@@ -157,7 +161,6 @@ export default function Messages() {
         </div>
       )}
 
-      {/* New chat dialog */}
       <NewChatDialog
         open={dialogMode !== null}
         onClose={() => setDialogMode(null)}

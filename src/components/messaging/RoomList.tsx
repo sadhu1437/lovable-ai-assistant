@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Plus, Search, Users, MessageCircle } from "lucide-react";
+import { Search, Users, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { OnlineIndicator } from "./OnlineIndicator";
 import type { ChatRoom, UserProfile } from "@/lib/messaging";
 
 interface RoomListProps {
@@ -11,9 +12,10 @@ interface RoomListProps {
   onNewGroup: () => void;
   roomProfiles: Record<string, UserProfile>;
   currentUserId: string;
+  onlineUsers: Set<string>;
 }
 
-export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, roomProfiles, currentUserId }: RoomListProps) {
+export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGroup, roomProfiles, currentUserId, onlineUsers }: RoomListProps) {
   const [search, setSearch] = useState("");
 
   const filtered = rooms.filter((r) => {
@@ -30,6 +32,12 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
   const getRoomAvatar = (room: ChatRoom) => {
     if (room.type === "group") return room.avatar_url;
     return roomProfiles[room.id]?.avatar_url;
+  };
+
+  const isRoomUserOnline = (room: ChatRoom) => {
+    if (room.type !== "dm") return false;
+    const profile = roomProfiles[room.id];
+    return profile ? onlineUsers.has(profile.user_id) : false;
   };
 
   return (
@@ -68,6 +76,7 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
           filtered.map((room) => {
             const name = getRoomDisplayName(room);
             const avatar = getRoomAvatar(room);
+            const isOnline = isRoomUserOnline(room);
             return (
               <button
                 key={room.id}
@@ -78,19 +87,22 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
-                <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-mono text-foreground overflow-hidden shrink-0">
-                  {avatar ? (
-                    <img src={avatar} alt="" className="w-full h-full object-cover" />
-                  ) : room.type === "group" ? (
-                    <Users className="w-4 h-4" />
-                  ) : (
-                    (name || "U")[0].toUpperCase()
-                  )}
+                <div className="relative shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-mono text-foreground overflow-hidden">
+                    {avatar ? (
+                      <img src={avatar} alt="" className="w-full h-full object-cover" />
+                    ) : room.type === "group" ? (
+                      <Users className="w-4 h-4" />
+                    ) : (
+                      (name || "U")[0].toUpperCase()
+                    )}
+                  </div>
+                  {room.type === "dm" && <OnlineIndicator isOnline={isOnline} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{name}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    {room.type === "group" ? "Group" : "Direct message"}
+                  <p className={`text-[10px] truncate ${isOnline ? "text-primary" : "text-muted-foreground"}`}>
+                    {room.type === "group" ? "Group" : isOnline ? "Online" : "Offline"}
                   </p>
                 </div>
               </button>
