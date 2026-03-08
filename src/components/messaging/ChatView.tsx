@@ -55,6 +55,7 @@ interface ChatViewProps {
 
 export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {}, onDeleteMessage }: ChatViewProps) {
   const [text, setText] = useState("");
+  const [showMention, setShowMention] = useState(false);
   const [sending, setSending] = useState(false);
   const [botThinking, setBotThinking] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
@@ -83,6 +84,9 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
   const handleTyping = useCallback((value: string) => {
     setText(value);
+    // Show @mention dropdown when user types @ at word boundary
+    const cursorMatch = value.match(/(^|\s)@(\w{0,10})$/);
+    setShowMention(!!cursorMatch);
     if (value.trim()) {
       setTyping(true);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -91,6 +95,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
       setTyping(false);
     }
   }, [setTyping]);
+
+  const insertMention = useCallback(() => {
+    setText((prev) => {
+      // Replace the partial @... at the end with @nexusai
+      const replaced = prev.replace(/(^|\s)@\w{0,10}$/, "$1@nexusai ");
+      return replaced;
+    });
+    setShowMention(false);
+  }, []);
 
   const isBotRoom = useCallback(() => {
     // Only check the roomProfiles entry for this specific room (reliable DM member lookup)
@@ -445,7 +458,25 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-border bg-card">
+      <div className="relative px-4 py-3 border-t border-border bg-card">
+        {/* @mention autocomplete */}
+        {showMention && (
+          <div className="absolute bottom-full left-4 right-4 mb-1 z-10">
+            <button
+              onClick={insertMention}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-card border border-border shadow-lg hover:bg-secondary transition-colors text-left"
+            >
+              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+                <Bot className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-foreground font-mono">@nexusai</p>
+                <p className="text-[10px] text-muted-foreground">Summon NexusAI Bot into this conversation</p>
+              </div>
+              <span className="ml-auto text-[10px] text-muted-foreground font-mono">Tab ↹</span>
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileUpload} />
           <Button variant="ghost" size="icon" className="shrink-0" onClick={() => fileInputRef.current?.click()}>
@@ -454,8 +485,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           <Input
             value={text}
             onChange={(e) => handleTyping(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder="Type a message..."
+            onKeyDown={(e) => {
+              if (showMention && (e.key === "Tab" || e.key === "Enter")) {
+                e.preventDefault();
+                insertMention();
+                return;
+              }
+              if (e.key === "Enter" && !e.shiftKey) handleSend();
+            }}
+            placeholder="Type a message... (@ to mention NexusAI)"
             className="text-sm font-mono"
           />
           {text.trim() ? (
