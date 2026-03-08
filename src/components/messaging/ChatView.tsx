@@ -109,10 +109,11 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     if (error) { toast.error("Failed to send message"); setSending(false); return; }
     setSending(false);
 
-    // Auto-trigger bot reply
-    if (isBotRoom()) {
+    // Auto-trigger bot reply in bot DMs or when @nexusai is mentioned
+    const mentionsBot = /(?:^|\s)@nexusai\b/i.test(trimmed);
+    if (isBotRoom() || mentionsBot) {
       setBotThinking(true);
-      const { error: botErr } = await triggerBotReply(room.id, trimmed);
+      const { error: botErr } = await triggerBotReply(room.id, trimmed.replace(/@nexusai/gi, "").trim());
       if (botErr) toast.error("Bot failed to reply");
       setBotThinking(false);
     }
