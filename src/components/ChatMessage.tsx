@@ -2,8 +2,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2, Volume2, VolumeX, FileDown, Play, Square } from "lucide-react";
-import { useState } from "react";
+import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2, Volume2, VolumeX, FileDown, Play, Square, Bookmark, BookmarkCheck, PlayCircle } from "lucide-react";
+import { useState, useRef } from "react";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { exportMessageAsPdf } from "@/lib/exportPdf";
 import type { Message } from "@/lib/chat";
@@ -15,6 +15,8 @@ interface ChatMessageProps {
   onCanvasEdit?: (editPrompt: string, existingCode: string) => void;
   isEditingImage?: boolean;
   isEditingCode?: boolean;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  onToggleBookmark?: (messageId: string, bookmarked: boolean) => void;
   elevenLabs?: {
     play: (text: string, msgId: string) => void;
     download: (text: string, msgId: string) => void;
@@ -23,13 +25,17 @@ interface ChatMessageProps {
   };
 }
 
-export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage, isEditingCode, elevenLabs }: ChatMessageProps) {
+export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage, isEditingCode, onEditMessage, onToggleBookmark, elevenLabs }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const [codeOutput, setCodeOutput] = useState<Record<string, string>>({});
   const { speaking, speak } = useTextToSpeech();
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
 
   const copyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
