@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { OnlineIndicator } from "./OnlineIndicator";
-import { searchUsers, fetchProfilesByUserIds, BOT_USERNAME, type ChatRoom, type UserProfile, type ChatRoomMember } from "@/lib/messaging";
+import { searchUsers, fetchProfilesByUserIds, getBotUserId, BOT_USERNAME, type ChatRoom, type UserProfile, type ChatRoomMember } from "@/lib/messaging";
 import {
   Sheet,
   SheetContent,
@@ -46,8 +46,31 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
   const [showAddMember, setShowAddMember] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<MemberWithProfile | null>(null);
   const [open, setOpen] = useState(false);
+  const [addingBot, setAddingBot] = useState(false);
 
   const currentMember = members.find(m => m.member.user_id === currentUserId);
+  const hasBotMember = members.some(m => m.profile?.username === BOT_USERNAME);
+
+  const addBotToGroup = async () => {
+    setAddingBot(true);
+    try {
+      const botUserId = await getBotUserId();
+      if (!botUserId) {
+        // Init bot via edge function if not found
+        const { data } = await supabase.functions.invoke("chat-bot-reply", {
+          body: { room_id: "init", message: "hello" },
+        });
+        const id = data?.bot_user_id;
+        if (!id) { toast.error("Could not find NexusAI Bot"); setAddingBot(false); return; }
+        await addMember(id);
+      } else {
+        await addMember(botUserId);
+      }
+    } catch {
+      toast.error("Failed to add bot");
+    }
+    setAddingBot(false);
+  };
   const isAdmin = currentMember?.member.role === "admin";
 
   const loadMembers = useCallback(async () => {
@@ -172,6 +195,27 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
               {/* Add member search */}
               {showAddMember && isAdmin && (
                 <div className="space-y-2 p-3 rounded-lg bg-secondary/30 border border-border">
+                  {/* Quick add bot button */}
+                  {!hasBotMember && (
+                    <button
+                      onClick={addBotToGroup}
+                      disabled={addingBot}
+                      className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-secondary transition-colors text-left border border-primary/20 bg-primary/5"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+                        <Bot className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground font-mono">NexusAI Bot</p>
+                        <p className="text-[10px] text-muted-foreground font-mono">AI Assistant</p>
+                      </div>
+                      {addingBot ? (
+                        <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin ml-auto shrink-0" />
+                      ) : (
+                        <UserPlus className="w-3.5 h-3.5 text-primary ml-auto shrink-0" />
+                      )}
+                    </button>
+                  )}
                   <Input
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
