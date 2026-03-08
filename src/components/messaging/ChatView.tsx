@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2 } from "lucide-react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -15,6 +15,8 @@ import { VoicePlayer } from "./VoicePlayer";
 import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
 import { useReactions } from "@/hooks/useReactions";
 import { ForwardMessageDialog } from "./ForwardMessageDialog";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { exportMessageAsPdf, exportMessagesToPdf } from "@/lib/exportPdf";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,6 +54,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
+  const { speaking, speak } = useTextToSpeech();
 
   // Load reactions when messages change
   useEffect(() => {
@@ -187,12 +190,31 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           </div>
           {room.type === "dm" && <OnlineIndicator isOnline={isOtherOnline} />}
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="text-sm font-semibold text-foreground font-mono">{roomName}</h3>
           <p className={`text-[10px] font-mono ${isOtherOnline || room.type === "group" ? "text-primary" : "text-muted-foreground"}`}>
             {getStatusText()}
           </p>
         </div>
+        {messages.length > 0 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            title="Export conversation as PDF"
+            onClick={() => exportMessagesToPdf(
+              messages.filter(m => m.message_type === "text" && m.content).map(m => ({
+                content: m.content || "",
+                sender: getDisplayName(m.sender_id),
+                timestamp: format(new Date(m.created_at), "HH:mm"),
+                role: m.sender_id === currentUserId ? "user" as const : "assistant" as const,
+              })),
+              roomName
+            )}
+          >
+            <FileDown className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -247,6 +269,29 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                       onSelect={(emoji) => toggleReaction(msg.id, emoji)}
                       align={isMe ? "right" : "left"}
                     />
+                    {msg.message_type === "text" && msg.content && (
+                      <button
+                        onClick={() => speak(msg.content || "", msg.id)}
+                        className={`p-1 rounded transition-colors ${speaking === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                        title={speaking === msg.id ? "Stop" : "Read aloud"}
+                      >
+                        {speaking === msg.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                    {msg.message_type === "text" && msg.content && (
+                      <button
+                        onClick={() => exportMessageAsPdf({
+                          content: msg.content || "",
+                          sender: getDisplayName(msg.sender_id),
+                          timestamp: format(new Date(msg.created_at), "HH:mm"),
+                          role: isMe ? "user" : "assistant",
+                        })}
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Export as PDF"
+                      >
+                        <FileDown className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => setForwardMsg(msg)}
                       className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"

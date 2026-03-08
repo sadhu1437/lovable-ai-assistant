@@ -2,8 +2,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2 } from "lucide-react";
+import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2, Volume2, VolumeX, FileDown } from "lucide-react";
 import { useState } from "react";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { exportMessageAsPdf } from "@/lib/exportPdf";
 import type { Message } from "@/lib/chat";
 import { CodeCanvas } from "./CodeCanvas";
 
@@ -21,6 +23,7 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
   const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
+  const { speaking, speak } = useTextToSpeech();
 
   const copyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
@@ -267,8 +270,31 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                 />
               )}
 
-              {/* Like / Dislike buttons */}
+              {/* Action buttons */}
               <div className="flex items-center gap-1 mt-4 pt-2">
+                <button
+                  onClick={() => speak(message.content, message.id)}
+                  className={`p-1.5 rounded-lg transition-all ${
+                    speaking === message.id
+                      ? "text-primary bg-primary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  }`}
+                  title={speaking === message.id ? "Stop speaking" : "Read aloud"}
+                >
+                  {speaking === message.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </button>
+                <button
+                  onClick={() => exportMessageAsPdf({
+                    content: message.content,
+                    sender: "NexusAI",
+                    timestamp: message.timestamp.toLocaleString(),
+                    role: "assistant",
+                  })}
+                  className="p-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  title="Export as PDF"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                </button>
                 <button
                   onClick={() => setFeedback(feedback === "like" ? null : "like")}
                   className={`p-1.5 rounded-lg transition-all ${
