@@ -46,28 +46,33 @@ export async function searchUsers(query: string): Promise<UserProfile[]> {
 }
 
 export async function createDM(currentUserId: string, otherUserId: string): Promise<string | null> {
-  // Check if DM already exists between these users
-  const { data: existingRooms } = await supabase
+  // Batch check: get all DM rooms the current user is in, then check for overlap
+  const { data: myRooms } = await supabase
     .from("chat_room_members")
     .select("room_id")
     .eq("user_id", currentUserId);
 
-  if (existingRooms) {
-    for (const room of existingRooms) {
-      const { data: roomData } = await supabase
+  if (myRooms && myRooms.length > 0) {
+    const roomIds = myRooms.map((r) => r.room_id);
+
+    // Single query: find rooms where the other user is also a member AND room type is dm
+    const { data: sharedMembers } = await supabase
+      .from("chat_room_members")
+      .select("room_id")
+      .eq("user_id", otherUserId)
+      .in("room_id", roomIds);
+
+    if (sharedMembers && sharedMembers.length > 0) {
+      // Verify at least one is a DM room (batch)
+      const { data: dmRooms } = await supabase
         .from("chat_rooms")
-        .select("*")
-        .eq("id", room.room_id)
+        .select("id")
+        .in("id", sharedMembers.map((m) => m.room_id))
         .eq("type", "dm")
-        .maybeSingle();
-      if (roomData) {
-        const { data: otherMember } = await supabase
-          .from("chat_room_members")
-          .select("id")
-          .eq("room_id", room.room_id)
-          .eq("user_id", otherUserId)
-          .maybeSingle();
-        if (otherMember) return room.room_id;
+        .limit(1);
+
+      if (dmRooms && dmRooms.length > 0) {
+        return dmRooms[0].id;
       }
     }
   }
@@ -80,7 +85,6 @@ export async function createDM(currentUserId: string, otherUserId: string): Prom
     .single();
   if (error || !room) return null;
 
-  // Add both members (creator is admin, can insert)
   await supabase.from("chat_room_members").insert([
     { room_id: room.id, user_id: currentUserId, role: "admin" },
     { room_id: room.id, user_id: otherUserId, role: "member" },
@@ -158,16 +162,13 @@ export async function getBotUserId(): Promise<string | null> {
 }
 
 export async function createBotDM(currentUserId: string): Promise<string | null> {
-  // First trigger the edge function to ensure the bot user exists
-  const { data: initData, error: initError } = await supabase.functions.invoke("chat-bot-reply", {
+  const { data: initData } = await supabase.functions.invoke("chat-bot-reply", {
     body: { room_id: "init", message: "hello" },
   });
-  
-  // Now get the bot user id
+
   const botUserId = initData?.bot_user_id;
   if (!botUserId) return null;
 
-  // Use normal DM creation flow
   return createDM(currentUserId, botUserId);
 }
 
