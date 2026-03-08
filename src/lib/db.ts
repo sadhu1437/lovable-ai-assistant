@@ -86,3 +86,12 @@ export async function deleteConversation(conversationId: string): Promise<void> 
 
   if (error) throw error;
 }
+
+export async function togglePinConversation(conversationId: string, pinned: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("conversations")
+    .update({ pinned })
+    .eq("id", conversationId);
+
+  if (error) throw error;
+}
