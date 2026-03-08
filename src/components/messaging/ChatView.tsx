@@ -270,6 +270,16 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           )}
         </div>
       </div>
+
+      <ForwardMessageDialog
+        open={forwardMsg !== null}
+        onClose={() => setForwardMsg(null)}
+        message={forwardMsg}
+        rooms={allRooms}
+        roomProfiles={roomProfiles}
+        currentRoomId={room.id}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 }
