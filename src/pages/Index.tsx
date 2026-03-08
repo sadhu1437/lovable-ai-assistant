@@ -7,7 +7,7 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
 import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo } from "@/lib/chat";
 import type { Message, Conversation } from "@/lib/chat";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -17,6 +17,7 @@ import {
   saveMessage,
   deleteConversation as dbDeleteConversation,
 } from "@/lib/db";
+import { exportAsMarkdown, exportAsPdf } from "@/lib/exportChat";
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -28,6 +29,7 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showGallery, setShowGallery] = useState(false);
   const [isEditingImage, setIsEditingImage] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const conversationsRef = useRef(conversations);
@@ -384,6 +386,35 @@ const Index = () => {
           </>
         ) : (
           <>
+            {/* Chat header with export */}
+            <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/50 backdrop-blur-sm">
+              <h2 className="text-sm font-mono text-foreground truncate">{activeConv.title}</h2>
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 overflow-hidden">
+                    <button
+                      onClick={() => { exportAsMarkdown(activeConv); setShowExportMenu(false); }}
+                      className="w-full px-4 py-2.5 text-left text-xs font-mono text-foreground hover:bg-secondary transition-colors"
+                    >
+                      📄 Export as Markdown
+                    </button>
+                    <button
+                      onClick={() => { exportAsPdf(activeConv); setShowExportMenu(false); }}
+                      className="w-full px-4 py-2.5 text-left text-xs font-mono text-foreground hover:bg-secondary transition-colors border-t border-border"
+                    >
+                      📑 Export as PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="flex-1 overflow-y-auto">
               {activeConv.messages.map((msg) => (
                 <ChatMessage
