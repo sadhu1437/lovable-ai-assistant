@@ -98,6 +98,8 @@ interface CallScreenProps {
   onToggleVideo: () => void;
   onEndCall: () => void;
   onFlipCamera?: () => void;
+  onToggleScreenShare?: () => void;
+  isScreenSharing?: boolean;
 }
 
 function formatDuration(seconds: number) {
@@ -120,6 +122,8 @@ export function CallScreen({
   onToggleVideo,
   onEndCall,
   onFlipCamera,
+  onToggleScreenShare,
+  isScreenSharing = false,
 }: CallScreenProps) {
   const name = remoteProfile?.display_name || remoteProfile?.username || "Unknown";
   const avatar = remoteProfile?.avatar_url;
