@@ -59,11 +59,12 @@ export default function Messages() {
     if (!allMembers) { setLoading(false); return; }
 
     const otherUserIds = new Set<string>();
-    const roomToOtherUser: Record<string, string> = {};
+    const roomToOtherUsers: Record<string, string[]> = {};
     for (const member of allMembers) {
       if (member.user_id !== user.id) {
         otherUserIds.add(member.user_id);
-        roomToOtherUser[member.room_id] = member.user_id;
+        if (!roomToOtherUsers[member.room_id]) roomToOtherUsers[member.room_id] = [];
+        roomToOtherUsers[member.room_id].push(member.user_id);
       }
     }
 
