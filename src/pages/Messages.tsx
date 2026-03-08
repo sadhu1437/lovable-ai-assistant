@@ -17,6 +17,7 @@ import {
   fetchProfilesByUserIds,
   fetchProfileByUserId,
   createBotDM,
+  deleteChatRoom,
   type ChatRoom,
   type ChatMessage,
   type UserProfile,
