@@ -148,6 +148,9 @@ function CacheStatsPanel() {
           const isAudio = s.label.includes("Audio");
           const currentTTL = isAudio ? audioTTL : dataTTL;
           const onChangeTTL = isAudio ? updateAudioTTL : updateDataTTL;
+          const currentMaxBytes = isAudio ? audioMaxBytes : dataMaxBytes;
+          const onChangeSize = isAudio ? updateAudioSize : updateDataSize;
+          const sizeOptions = isAudio ? AUDIO_SIZE_OPTIONS : DATA_SIZE_OPTIONS;
           const diskCount = diskStats
             ? isAudio ? diskStats.audioEntries : diskStats.dataEntries
             : null;
@@ -160,8 +163,8 @@ function CacheStatsPanel() {
                 </span>
               </div>
               <Progress value={pct} className="h-2" />
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground font-mono">TTL:</span>
                   <Select value={String(currentTTL)} onValueChange={onChangeTTL}>
                     <SelectTrigger className="h-7 w-24 text-xs font-mono">
@@ -176,8 +179,23 @@ function CacheStatsPanel() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground font-mono">Max:</span>
+                  <Select value={String(currentMaxBytes)} onValueChange={onChangeSize}>
+                    <SelectTrigger className="h-7 w-24 text-xs font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sizeOptions.map((opt) => (
+                        <SelectItem key={opt.bytes} value={String(opt.bytes)} className="text-xs font-mono">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 {diskCount !== null && (
-                  <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 ml-auto">
                     <HardDrive className="w-3 h-3" />
                     {diskCount} on disk
                   </span>
