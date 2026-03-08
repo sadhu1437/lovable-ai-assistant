@@ -241,11 +241,26 @@ export function ChatInput({ onSend, onCanvasSend, onFileUpload, isLoading, categ
           </div>
         )}
 
+        {/* Canvas mode indicator */}
+        {canvasMode && (
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30">
+              <Code className="w-4 h-4 text-primary" />
+              <span className="text-xs font-mono text-primary">Canvas Mode — AI will generate full-stack code</span>
+              <button onClick={() => setCanvasMode(false)} className="text-primary/60 hover:text-primary transition-colors">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Input area */}
         <div className={`relative flex items-end gap-2 bg-card border rounded-xl p-2 transition-all ${
-          isListening
-            ? "border-primary glow-primary"
-            : "border-border focus-within:border-primary/50 focus-within:glow-primary"
+          canvasMode
+            ? "border-primary/50 glow-primary"
+            : isListening
+              ? "border-primary glow-primary"
+              : "border-border focus-within:border-primary/50 focus-within:glow-primary"
         }`}>
           {/* File upload button */}
           <input
@@ -262,12 +277,25 @@ export function ChatInput({ onSend, onCanvasSend, onFileUpload, isLoading, categ
             <Paperclip className="w-4 h-4" />
           </button>
 
+          {/* Canvas mode toggle */}
+          <button
+            onClick={() => setCanvasMode(!canvasMode)}
+            className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+              canvasMode
+                ? "bg-primary text-primary-foreground glow-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
+            title={canvasMode ? "Exit Canvas mode" : "Canvas mode — generate full-stack code"}
+          >
+            <Code className="w-4 h-4" />
+          </button>
+
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={selectedFile ? "Add a note about this file (optional)..." : isListening ? "Listening..." : "Ask NexusAI anything..."}
+            placeholder={canvasMode ? "Describe the website or app to build..." : selectedFile ? "Add a note about this file (optional)..." : isListening ? "Listening..." : "Ask NexusAI anything..."}
             rows={1}
             className="flex-1 bg-transparent resize-none text-foreground placeholder:text-muted-foreground outline-none px-2 py-1.5 text-sm max-h-[200px]"
           />
