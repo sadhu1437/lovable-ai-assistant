@@ -54,13 +54,8 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     setText("");
     setTyping(false);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    const { error, data } = await sendMessage(room.id, currentUserId, trimmed);
-    if (error) {
-      toast.error("Failed to send message");
-    } else if (data) {
-      // Optimistic: add message immediately if not already present
-      if (onMessageSent) onMessageSent(data[0] as ChatMessage);
-    }
+    const { error } = await sendMessage(room.id, currentUserId, trimmed);
+    if (error) toast.error("Failed to send message");
     setSending(false);
   };
 
