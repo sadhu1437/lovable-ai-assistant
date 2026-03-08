@@ -166,12 +166,20 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
                 </div>
                 {/* Delete button visible on hover (desktop) */}
                 <div
-                  className="hidden group-hover:flex shrink-0 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  className="hidden md:flex shrink-0 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors opacity-70 group-hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     setDeleteRoom(room);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDeleteRoom(room);
+                    }
+                  }}
                   role="button"
+                  tabIndex={0}
                   title="Delete conversation"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
