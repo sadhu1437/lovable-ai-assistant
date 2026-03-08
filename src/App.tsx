@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { NotificationProvider } from "@/hooks/useNotificationContext";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { lazy, Suspense } from "react";
@@ -57,8 +58,9 @@ const PageLoader = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <ThemeProvider>
-        <TooltipProvider>
+      <NotificationProvider>
+        <ThemeProvider>
+          <TooltipProvider>
           <Toaster />
           <Sonner />
           <ErrorBoundary>
@@ -78,6 +80,7 @@ const App = () => (
           </ErrorBoundary>
         </TooltipProvider>
       </ThemeProvider>
+    </NotificationProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

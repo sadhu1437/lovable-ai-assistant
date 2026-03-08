@@ -4,6 +4,8 @@ import type { Conversation } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
 import { useTheme } from "@/hooks/useTheme";
 import { prefetchRoute } from "@/lib/routePrefetch";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { useNotificationContext } from "@/hooks/useNotificationContext";
 
 interface ChatSidebarProps {
   conversations: Conversation[];
@@ -21,6 +23,7 @@ interface ChatSidebarProps {
 export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, onPin, onGallery, showGallery, user, onSignOut }: ChatSidebarProps) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { notifications, unreadCount, loading: notifLoading, markAsRead, markAllAsRead, clearAll } = useNotificationContext();
 
   return (
     <div className="w-64 h-full bg-card border-r border-border flex flex-col">
@@ -30,10 +33,23 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
           <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center glow-primary">
             <span className="text-sm font-bold font-mono">N</span>
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-sm font-semibold text-foreground font-mono">NexusAI</h1>
             <p className="text-[10px] text-muted-foreground">Ultra-fast AI</p>
           </div>
+          {user && (
+            <NotificationCenter
+              notifications={notifications}
+              unreadCount={unreadCount}
+              loading={notifLoading}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+              onClearAll={clearAll}
+              onNotificationClick={(notif) => {
+                if (notif.room_id) navigate("/messages");
+              }}
+            />
+          )}
         </div>
         <button
           onClick={onNew}
