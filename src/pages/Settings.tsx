@@ -461,6 +461,18 @@ export default function Settings() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="statusMessage" className="font-mono text-xs">Status Message</Label>
+                  <Input
+                    id="statusMessage"
+                    value={statusMessage}
+                    onChange={(e) => setStatusMessage(e.target.value)}
+                    placeholder="e.g. In a meeting, Available, On vacation..."
+                    className="font-mono text-sm"
+                    maxLength={80}
+                  />
+                  <p className="text-[10px] text-muted-foreground">{statusMessage.length}/80 characters</p>
+                </div>
                 <Button onClick={saveProfile} disabled={saving} className="gap-2 font-mono text-xs">
                   <Save className="w-3.5 h-3.5" />
                   {saving ? "Saving…" : "Save Profile"}
