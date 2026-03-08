@@ -250,7 +250,7 @@ export default function Messages() {
         <RoomList
           rooms={rooms}
           activeRoomId={activeRoomId}
-          onSelectRoom={setActiveRoomId}
+          onSelectRoom={handleSelectRoom}
           onNewDM={() => setDialogMode("dm")}
           onNewGroup={() => setDialogMode("group")}
           onChatWithBot={async () => {
@@ -279,6 +279,7 @@ export default function Messages() {
           roomProfiles={roomProfiles}
           currentUserId={user.id}
           onlineUsers={onlineUsers}
+          mentionCounts={mentionCounts}
         />
       </div>
 
