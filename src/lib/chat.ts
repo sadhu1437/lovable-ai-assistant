@@ -4,6 +4,7 @@ export type Message = {
   content: string;
   images?: string[];
   videoUrl?: string;
+  filePreview?: { name: string; type: string; isImage: boolean; dataUrl?: string };
   timestamp: Date;
 };
 
@@ -234,4 +235,95 @@ export async function generateImage({
   } catch (e) {
     onError(e instanceof Error ? e.message : "Unknown error");
   }
+}
+
+const FILE_ANALYZE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/file-analyze`;
+
+export async function analyzeFile({
+  fileName,
+  fileType,
+  fileContent,
+  userPrompt,
+  onDelta,
+  onDone,
+  onError,
+}: {
+  fileName: string;
+  fileType: string;
+  fileContent: string;
+  userPrompt?: string;
+  onDelta: (text: string) => void;
+  onDone: () => void;
+  onError: (error: string) => void;
+}) {
+  try {
+    const resp = await fetch(FILE_ANALYZE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ fileName, fileType, fileContent, userPrompt }),
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      onError(data.error || `Error ${resp.status}`);
+      return;
+    }
+
+    if (!resp.body) {
+      onError("No response body");
+      return;
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let idx: number;
+      while ((idx = buffer.indexOf("\n")) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (!line.startsWith("data: ")) continue;
+        const json = line.slice(6).trim();
+        if (json === "[DONE]") { onDone(); return; }
+        try {
+          const parsed = JSON.parse(json);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) onDelta(content);
+        } catch {
+          buffer = line + "\n" + buffer;
+          break;
+        }
+      }
+    }
+    onDone();
+  } catch (e) {
+    onError(e instanceof Error ? e.message : "Unknown error");
+  }
+}
+
+export function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+export function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
 }
