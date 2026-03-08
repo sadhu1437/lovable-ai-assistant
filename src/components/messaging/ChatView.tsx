@@ -124,10 +124,16 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
     // Auto-trigger bot reply in bot DMs or when @nexusai is mentioned
     const mentionsBot = /(?:^|\s)@nexusai\b/i.test(trimmed);
-    if (isBotRoom() || mentionsBot) {
+    const botRoom = isBotRoom();
+    if (botRoom || mentionsBot) {
       setBotThinking(true);
-      const { error: botErr } = await triggerBotReply(room.id, trimmed.replace(/@nexusai/gi, "").trim());
-      if (botErr) toast.error("Bot failed to reply");
+      const cleanPrompt = botRoom
+        ? trimmed
+        : trimmed.replace(/@nexusai/gi, "").trim();
+      if (cleanPrompt) {
+        const { error: botErr } = await triggerBotReply(room.id, cleanPrompt);
+        if (botErr) toast.error("Bot failed to reply");
+      }
       setBotThinking(false);
     }
   };
