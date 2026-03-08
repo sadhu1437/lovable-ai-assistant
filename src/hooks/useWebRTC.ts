@@ -29,6 +29,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   const [isGroupCall, setIsGroupCall] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>("unknown");
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   // For 1:1 calls
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -542,7 +544,6 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   }, []);
 
   // Flip camera (front/back)
-  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const flipCamera = useCallback(async () => {
     if (!localStreamRef.current) return;
     const newFacing = facingMode === "user" ? "environment" : "user";
@@ -607,7 +608,6 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   }, [facingMode]);
 
   // Screen sharing
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const screenStreamRef = useRef<MediaStream | null>(null);
 
   const toggleScreenShare = useCallback(async () => {
