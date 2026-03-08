@@ -401,7 +401,6 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    </div>
                   )}
                 </div>
                 {/* Reaction display */}
