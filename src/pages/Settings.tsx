@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getAllCacheStats, clearAllCaches } from "@/lib/audioCache";
+import { getAllCacheStats, clearAllCaches, audioCache, dataCache } from "@/lib/audioCache";
 
 const AI_MODELS = [
   { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", desc: "Fast & balanced" },
@@ -33,8 +33,32 @@ function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
+const TTL_OPTIONS = [
+  { label: "30s", ms: 30 * 1000 },
+  { label: "1 min", ms: 60 * 1000 },
+  { label: "2 min", ms: 2 * 60 * 1000 },
+  { label: "5 min", ms: 5 * 60 * 1000 },
+  { label: "15 min", ms: 15 * 60 * 1000 },
+  { label: "30 min", ms: 30 * 60 * 1000 },
+  { label: "1 hr", ms: 60 * 60 * 1000 },
+];
+
+function formatTTL(ms: number): string {
+  if (ms >= 3600000) return `${Math.round(ms / 3600000)} hr`;
+  if (ms >= 60000) return `${Math.round(ms / 60000)} min`;
+  return `${Math.round(ms / 1000)}s`;
+}
+
 function CacheStatsPanel() {
   const [stats, setStats] = useState(getAllCacheStats());
+  const [audioTTL, setAudioTTL] = useState(() => {
+    const saved = localStorage.getItem("nexus-cache-ttl-audio");
+    return saved ? Number(saved) : audioCache.stats.defaultTTL;
+  });
+  const [dataTTL, setDataTTL] = useState(() => {
+    const saved = localStorage.getItem("nexus-cache-ttl-data");
+    return saved ? Number(saved) : dataCache.stats.defaultTTL;
+  });
 
   const refresh = () => setStats(getAllCacheStats());
 
@@ -44,15 +68,42 @@ function CacheStatsPanel() {
     toast.success("All caches cleared");
   };
 
+  const updateAudioTTL = (ms: string) => {
+    const val = Number(ms);
+    setAudioTTL(val);
+    audioCache.setDefaultTTL(val);
+    localStorage.setItem("nexus-cache-ttl-audio", String(val));
+    toast.success(`Audio TTL set to ${formatTTL(val)}`);
+  };
+
+  const updateDataTTL = (ms: string) => {
+    const val = Number(ms);
+    setDataTTL(val);
+    dataCache.setDefaultTTL(val);
+    localStorage.setItem("nexus-cache-ttl-data", String(val));
+    toast.success(`Data TTL set to ${formatTTL(val)}`);
+  };
+
+  // Restore saved TTLs on mount
+  useEffect(() => {
+    const savedAudio = localStorage.getItem("nexus-cache-ttl-audio");
+    if (savedAudio) audioCache.setDefaultTTL(Number(savedAudio));
+    const savedData = localStorage.getItem("nexus-cache-ttl-data");
+    if (savedData) dataCache.setDefaultTTL(Number(savedData));
+  }, []);
+
   return (
     <Card className="border-border bg-card">
       <CardHeader>
         <CardTitle className="text-base font-mono">Cache Management</CardTitle>
-        <CardDescription>View memory usage and clear cached data.</CardDescription>
+        <CardDescription>View memory usage, configure TTL, and clear cached data.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {stats.map((s) => {
           const pct = s.maxBytes > 0 ? (s.bytesUsed / s.maxBytes) * 100 : 0;
+          const isAudio = s.label.includes("Audio");
+          const currentTTL = isAudio ? audioTTL : dataTTL;
+          const onChangeTTL = isAudio ? updateAudioTTL : updateDataTTL;
           return (
             <div key={s.label} className="space-y-2">
               <div className="flex items-center justify-between">
@@ -62,6 +113,22 @@ function CacheStatsPanel() {
                 </span>
               </div>
               <Progress value={pct} className="h-2" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-mono">TTL:</span>
+                <Select value={String(currentTTL)} onValueChange={onChangeTTL}>
+                  <SelectTrigger className="h-7 w-24 text-xs font-mono">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TTL_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.ms} value={String(opt.ms)} className="text-xs font-mono">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-[10px] text-muted-foreground">Entries expire after this duration</span>
+              </div>
             </div>
           );
         })}
