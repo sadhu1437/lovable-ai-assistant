@@ -215,12 +215,19 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                       <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                     )}
                   </div>
-                  {/* Reaction picker - appears on hover */}
-                  <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1`}>
+                  {/* Actions - appears on hover */}
+                  <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}>
                     <ReactionPicker
                       onSelect={(emoji) => toggleReaction(msg.id, emoji)}
                       align={isMe ? "right" : "left"}
                     />
+                    <button
+                      onClick={() => setForwardMsg(msg)}
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      title="Forward"
+                    >
+                      <Forward className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
                 {/* Reaction display */}
