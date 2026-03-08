@@ -465,6 +465,71 @@ const Index = () => {
     });
   };
 
+  // Explicit Canvas mode send — always triggers code generation
+  const handleCanvasSend = async (content: string) => {
+    let convId = activeId;
+    const isNew = !convId;
+
+    if (isNew) {
+      if (user) {
+        try {
+          convId = await dbCreateConversation(user.id, content.slice(0, 40), category);
+        } catch {
+          toast.error("Failed to create conversation");
+          return;
+        }
+      } else {
+        convId = generateId();
+      }
+      const conv: Conversation = { id: convId, title: content.slice(0, 40), messages: [], category, createdAt: new Date() };
+      setConversations((prev) => [conv, ...prev]);
+      setActiveId(convId);
+    }
+
+    const userMsg: Message = { id: generateId(), role: "user", content: `🖥️ **Canvas:** ${content}`, timestamp: new Date() };
+    if (user) {
+      try { const dbId = await saveMessage(convId!, "user", userMsg.content); userMsg.id = dbId; } catch {}
+    }
+    setConversations((prev) =>
+      prev.map((c) => c.id === convId ? { ...c, messages: [...c.messages, userMsg], title: c.messages.length === 0 ? content.slice(0, 40) : c.title } : c)
+    );
+
+    setIsLoading(true);
+    const localAssistantId = generateId();
+    let codeAccumulator = "";
+
+    await streamCodeGenerate({
+      prompt: content,
+      onDelta: (delta) => {
+        codeAccumulator += delta;
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== convId) return c;
+            const existing = c.messages.find((m) => m.id === localAssistantId);
+            if (existing) {
+              return { ...c, messages: c.messages.map((m) => m.id === localAssistantId ? { ...m, codeContent: codeAccumulator } : m) };
+            }
+            return { ...c, messages: [...c.messages, { id: localAssistantId, role: "assistant" as const, content: "Here's your code! ✨", codeContent: codeAccumulator, timestamp: new Date() }] };
+          })
+        );
+      },
+      onDone: async () => {
+        setIsLoading(false);
+        if (user) {
+          const finalConv = conversationsRef.current.find((c) => c.id === convId);
+          const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
+          if (assistantMsg) {
+            try {
+              const dbId = await saveMessage(convId!, "assistant", assistantMsg.content);
+              setConversations((prev) => prev.map((c) => c.id === convId ? { ...c, messages: c.messages.map((m) => m.id === localAssistantId ? { ...m, id: dbId } : m) } : c));
+            } catch {}
+          }
+        }
+      },
+      onError: (err) => { setIsLoading(false); toast.error(err); },
+    });
+  };
+
   const handleFileUpload = async (file: File, prompt?: string) => {
     let convId = activeId;
     const isNew = !convId;
