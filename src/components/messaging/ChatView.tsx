@@ -59,6 +59,11 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     }
   }, [setTyping]);
 
+  const isBotRoom = useCallback(() => {
+    const other = Object.values(profiles).find((p) => p.user_id !== currentUserId);
+    return other?.username === BOT_USERNAME;
+  }, [profiles, currentUserId]);
+
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
@@ -67,8 +72,16 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     setTyping(false);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     const { error } = await sendMessage(room.id, currentUserId, trimmed);
-    if (error) toast.error("Failed to send message");
+    if (error) { toast.error("Failed to send message"); setSending(false); return; }
     setSending(false);
+
+    // Auto-trigger bot reply
+    if (isBotRoom()) {
+      setBotThinking(true);
+      const { error: botErr } = await triggerBotReply(room.id, trimmed);
+      if (botErr) toast.error("Bot failed to reply");
+      setBotThinking(false);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,9 +108,10 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   };
 
   const otherUser = Object.values(profiles).find((p) => p.user_id !== currentUserId);
+  const isBot = otherUser?.username === BOT_USERNAME;
   const roomName = room.type === "group" ? room.name || "Unnamed Group" : otherUser?.display_name || "Chat";
   const otherUserId = otherUser?.user_id;
-  const isOtherOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
+  const isOtherOnline = isBot ? true : (otherUserId ? onlineUsers.has(otherUserId) : false);
 
   const typingNames = Array.from(typingUsers).map((uid) => getDisplayName(uid));
 
