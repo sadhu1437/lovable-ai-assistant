@@ -465,6 +465,7 @@ const Index = () => {
     });
   };
 
+  const handleFileUpload = async (file: File, prompt?: string) => {
     let convId = activeId;
     const isNew = !convId;
     const title = prompt?.slice(0, 40) || `📎 ${file.name}`;
