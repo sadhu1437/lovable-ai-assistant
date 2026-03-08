@@ -540,21 +540,25 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           const repliedMsg = msg.reply_to ? messageById[msg.reply_to] : null;
           return (
             <div key={msg.id} id={`msg-${msg.id}`} className={`group flex gap-2 ${isMe ? "flex-row-reverse" : ""} transition-all rounded-lg`} tabIndex={0}>
-              <div className={`w-7 h-7 rounded-full ${isMsgBot ? "bg-primary/20 border-primary/40" : "bg-secondary border-border"} border flex items-center justify-center overflow-hidden shrink-0 mt-1`}>
-                {isMsgBot ? (
-                  <Bot className="w-3.5 h-3.5 text-primary" />
-                ) : avatar ? (
-                  <img src={avatar} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[10px] font-mono text-foreground">
-                    {getDisplayName(msg.sender_id)[0].toUpperCase()}
-                  </span>
-                )}
-              </div>
+              <ProfileCard userId={msg.sender_id} onlineUsers={onlineUsers} onStartDM={onStartDM} currentUserId={currentUserId}>
+                <div className={`w-7 h-7 rounded-full ${isMsgBot ? "bg-primary/20 border-primary/40" : "bg-secondary border-border"} border flex items-center justify-center overflow-hidden shrink-0 mt-1`}>
+                  {isMsgBot ? (
+                    <Bot className="w-3.5 h-3.5 text-primary" />
+                  ) : avatar ? (
+                    <img src={avatar} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] font-mono text-foreground">
+                      {getDisplayName(msg.sender_id)[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              </ProfileCard>
               <div className={`max-w-[70%] ${isMe ? "items-end" : "items-start"}`}>
                 {!isMe && (room.type === "group" || isMsgBot) && (
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <p className="text-[10px] text-muted-foreground font-mono">{getDisplayName(msg.sender_id)}</p>
+                    <ProfileCard userId={msg.sender_id} onlineUsers={onlineUsers} onStartDM={onStartDM} currentUserId={currentUserId}>
+                      <p className="text-[10px] text-muted-foreground font-mono hover:underline cursor-pointer">{getDisplayName(msg.sender_id)}</p>
+                    </ProfileCard>
                     {isMsgBot && (
                       <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">
                         Bot
