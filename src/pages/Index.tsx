@@ -828,6 +828,8 @@ const Index = () => {
                   onCanvasEdit={handleCanvasEdit}
                   isEditingImage={isEditingImage}
                   isEditingCode={isEditingCode}
+                  onEditMessage={handleEditMessage}
+                  onToggleBookmark={handleToggleBookmark}
                   elevenLabs={{
                     play: tts.play,
                     download: tts.download,
