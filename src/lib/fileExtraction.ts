@@ -1,10 +1,3 @@
-import mammoth from "mammoth";
-import * as XLSX from "xlsx";
-import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
-import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
-
 type ExtractedFile = {
   fileType: string;
   isImage: boolean;
@@ -46,8 +39,12 @@ async function imageToDataUrl(file: File) {
 }
 
 async function extractPdfText(file: File) {
+  const pdfjs = await import("pdfjs-dist");
+  const workerModule = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
+  pdfjs.GlobalWorkerOptions.workerSrc = workerModule.default;
+
   const buffer = await file.arrayBuffer();
-  const pdf = await getDocument({ data: buffer }).promise;
+  const pdf = await pdfjs.getDocument({ data: buffer }).promise;
   const pageCount = Math.min(pdf.numPages, 25);
   const pages: string[] = [];
 
@@ -65,12 +62,14 @@ async function extractPdfText(file: File) {
 }
 
 async function extractDocxText(file: File) {
+  const mammoth = (await import("mammoth")).default;
   const buffer = await file.arrayBuffer();
   const result = await mammoth.extractRawText({ arrayBuffer: buffer });
   return result.value.trim();
 }
 
 async function extractSpreadsheetText(file: File) {
+  const XLSX = await import("xlsx");
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array" });
   const sections = workbook.SheetNames.map((sheetName) => {
