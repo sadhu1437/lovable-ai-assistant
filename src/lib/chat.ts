@@ -2,6 +2,7 @@ export type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  images?: string[];
   timestamp: Date;
 };
 
@@ -99,4 +100,60 @@ export async function streamChat({
 
 export function generateId() {
   return crypto.randomUUID();
+}
+
+const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/image-generate`;
+
+const IMAGE_TRIGGERS = [
+  /generate\s+(an?\s+)?image/i,
+  /create\s+(an?\s+)?image/i,
+  /draw\s+(me\s+)?(an?\s+)?/i,
+  /make\s+(an?\s+)?image/i,
+  /generate\s+(an?\s+)?picture/i,
+  /create\s+(an?\s+)?picture/i,
+  /imagine\s+/i,
+  /show\s+me\s+(an?\s+)?image/i,
+  /visualize\s+/i,
+  /paint\s+/i,
+  /sketch\s+/i,
+  /design\s+(an?\s+)?image/i,
+  /generate\s+(an?\s+)?photo/i,
+  /create\s+(an?\s+)?illustration/i,
+];
+
+export function isImageRequest(text: string): boolean {
+  return IMAGE_TRIGGERS.some((re) => re.test(text));
+}
+
+export async function generateImage({
+  prompt,
+  onResult,
+  onError,
+}: {
+  prompt: string;
+  onResult: (text: string, images: string[]) => void;
+  onError: (error: string) => void;
+}) {
+  try {
+    const resp = await fetch(IMAGE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      onError(data.error || `Error ${resp.status}`);
+      return;
+    }
+
+    const data = await resp.json();
+    const images = (data.images || []).map((img: any) => img.image_url?.url || "").filter(Boolean);
+    onResult(data.text || "Here's your generated image:", images);
+  } catch (e) {
+    onError(e instanceof Error ? e.message : "Unknown error");
+  }
 }
