@@ -230,7 +230,13 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                     return (
                       <div
                         key={member.id}
-                        className="flex items-start gap-2.5 px-2 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group"
+                        className={`flex items-start gap-2.5 px-2 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group ${!isCurrentUser && onStartDM ? "cursor-pointer" : ""}`}
+                        onClick={() => {
+                          if (!isCurrentUser && onStartDM) {
+                            onStartDM(member.user_id);
+                            setOpen(false);
+                          }
+                        }}
                       >
                         {/* Avatar */}
                         <div className="relative shrink-0">
