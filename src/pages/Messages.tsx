@@ -143,6 +143,16 @@ export default function Messages() {
           onSelectRoom={setActiveRoomId}
           onNewDM={() => setDialogMode("dm")}
           onNewGroup={() => setDialogMode("group")}
+          onChatWithBot={async () => {
+            toast.info("Starting chat with NexusAI Bot...");
+            const roomId = await createBotDM(user.id);
+            if (roomId) {
+              await loadRooms();
+              setActiveRoomId(roomId);
+            } else {
+              toast.error("Failed to start bot chat");
+            }
+          }}
           roomProfiles={roomProfiles}
           currentUserId={user.id}
           onlineUsers={onlineUsers}
