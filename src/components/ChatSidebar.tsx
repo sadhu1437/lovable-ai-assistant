@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, Trash2, LogOut, LogIn, Image as ImageIcon, Sun, Moon } from "lucide-react";
+import { Plus, MessageSquare, Trash2, LogOut, LogIn, Image as ImageIcon, Sun, Moon, Pin, PinOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Conversation } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
@@ -10,6 +10,7 @@ interface ChatSidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onPin: (id: string, pinned: boolean) => void;
   onGallery: () => void;
   showGallery: boolean;
   user?: User | null;
