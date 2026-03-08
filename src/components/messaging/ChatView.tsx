@@ -154,7 +154,11 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const handleAcceptCall = async () => {
     if (!incomingCall) return;
     try {
-      await webrtc.answerCall(incomingCall.id, incomingCall.callType);
+      if (incomingCall.isGroupCall) {
+        await webrtc.joinGroupCall(incomingCall.id, incomingCall.callType);
+      } else {
+        await webrtc.answerCall(incomingCall.id, incomingCall.callType);
+      }
       setIncomingCall(null);
     } catch {
       toast.error("Failed to answer call");
