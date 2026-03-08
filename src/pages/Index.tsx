@@ -57,7 +57,26 @@ const Index = () => {
     }
   }, [user]);
 
-  // Load messages when active conversation changes (for DB-backed convos)
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key === 'n') {
+        e.preventDefault();
+        setActiveId(null);
+        setShowGallery(false);
+        setSidebarOpen(false);
+        setTimeout(() => chatInputRef.current?.focus(), 100);
+      }
+      if (mod && e.key === '/') {
+        e.preventDefault();
+        chatInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   useEffect(() => {
     if (!activeId || !user) return;
     const conv = conversations.find((c) => c.id === activeId);
