@@ -55,6 +55,7 @@ interface ChatViewProps {
 
 export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {}, onDeleteMessage }: ChatViewProps) {
   const [text, setText] = useState("");
+  const [showMention, setShowMention] = useState(false);
   const [sending, setSending] = useState(false);
   const [botThinking, setBotThinking] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
