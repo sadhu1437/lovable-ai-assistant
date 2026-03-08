@@ -7,6 +7,8 @@ export type Message = {
   codeContent?: string;
   filePreview?: { name: string; type: string; isImage: boolean; dataUrl?: string };
   timestamp: Date;
+  editedAt?: Date | null;
+  bookmarked?: boolean;
 };
 
 export type Conversation = {

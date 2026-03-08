@@ -30,11 +30,24 @@ export async function loadMessages(conversationId: string): Promise<Message[]> {
 
   if (error) throw error;
 
-  return (data || []).map((m) => ({
+  // Load bookmarks for user
+  const { data: { user } } = await supabase.auth.getUser();
+  const bookmarkedIds = new Set<string>();
+  if (user) {
+    const { data: bmarks } = await supabase
+      .from("bookmarks")
+      .select("message_id")
+      .eq("user_id", user.id);
+    if (bmarks) bmarks.forEach((b: any) => bookmarkedIds.add(b.message_id));
+  }
+
+  return (data || []).map((m: any) => ({
     id: m.id,
     role: m.role as "user" | "assistant",
     content: m.content,
     timestamp: new Date(m.created_at),
+    editedAt: m.edited_at ? new Date(m.edited_at) : null,
+    bookmarked: bookmarkedIds.has(m.id),
   }));
 }
 
@@ -63,10 +76,20 @@ export async function saveMessage(conversationId: string, role: string, content:
 export async function updateMessageContent(messageId: string, content: string): Promise<void> {
   const { error } = await supabase
     .from("messages")
-    .update({ content })
+    .update({ content, edited_at: new Date().toISOString() } as any)
     .eq("id", messageId);
 
   if (error) throw error;
+}
+
+export async function toggleBookmark(messageId: string, userId: string, bookmarked: boolean): Promise<void> {
+  if (bookmarked) {
+    const { error } = await supabase.from("bookmarks").insert({ user_id: userId, message_id: messageId } as any);
+    if (error && !error.message.includes("duplicate")) throw error;
+  } else {
+    const { error } = await supabase.from("bookmarks").delete().eq("user_id", userId).eq("message_id", messageId);
+    if (error) throw error;
+  }
 }
 
 export async function updateConversationTitle(conversationId: string, title: string): Promise<void> {
