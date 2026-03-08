@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Clock, MessageSquare, Camera, Loader2, Pencil, Check, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { User, Clock, MessageSquare, Camera, Loader2, Pencil, Check, X, ExternalLink } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { OnlineIndicator } from "./OnlineIndicator";
 import { supabase } from "@/integrations/supabase/client";

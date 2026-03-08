@@ -16,6 +16,7 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Messages = lazy(() => import("./pages/Messages"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +74,7 @@ const App = () => (
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/messages" element={<ErrorBoundary><Messages /></ErrorBoundary>} />
+                  <Route path="/profile/:userId" element={<UserProfile />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
