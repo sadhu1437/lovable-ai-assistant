@@ -3,6 +3,7 @@ export type Message = {
   role: "user" | "assistant";
   content: string;
   images?: string[];
+  videoUrl?: string;
   timestamp: Date;
 };
 
@@ -145,6 +146,56 @@ const IMAGE_TRIGGERS = [
 
 export function isImageRequest(text: string): boolean {
   return IMAGE_TRIGGERS.some((re) => re.test(text));
+}
+
+const VIDEO_TRIGGERS = [
+  /generate\s+(an?\s+)?video/i,
+  /create\s+(an?\s+)?video/i,
+  /make\s+(an?\s+)?video/i,
+  /animate\s+/i,
+  /create\s+(an?\s+)?animation/i,
+  /generate\s+(an?\s+)?animation/i,
+  /make\s+(an?\s+)?clip/i,
+  /generate\s+(an?\s+)?clip/i,
+  /text[\s-]to[\s-]video/i,
+];
+
+export function isVideoRequest(text: string): boolean {
+  return VIDEO_TRIGGERS.some((re) => re.test(text));
+}
+
+const VIDEO_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/video-generate`;
+
+export async function generateVideo({
+  prompt,
+  onResult,
+  onError,
+}: {
+  prompt: string;
+  onResult: (text: string, videoUrl: string) => void;
+  onError: (error: string) => void;
+}) {
+  try {
+    const resp = await fetch(VIDEO_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      onError(data.error || `Error ${resp.status}`);
+      return;
+    }
+
+    const data = await resp.json();
+    onResult(data.text || "Here's your generated video:", data.videoUrl || "");
+  } catch (e) {
+    onError(e instanceof Error ? e.message : "Unknown error");
+  }
 }
 
 export async function generateImage({
