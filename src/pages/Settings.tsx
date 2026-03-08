@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, User, Cpu, Sliders, Upload, Database, Trash2, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -234,6 +235,7 @@ export default function Settings() {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [bio, setBio] = useState("");
   const [defaultModel, setDefaultModel] = useState(() =>
     localStorage.getItem("nexus-default-model") || "google/gemini-3-flash-preview"
   );
@@ -263,6 +265,7 @@ export default function Settings() {
           setDisplayName(data.display_name || "");
           setAvatarUrl(data.avatar_url || "");
           setUsername((data as any).username || "");
+          setBio((data as any).bio || "");
         }
         setLoading(false);
       });
@@ -273,7 +276,7 @@ export default function Settings() {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null } as any)
+      .update({ display_name: displayName, avatar_url: avatarUrl, username: username || null, bio: bio || null } as any)
       .eq("user_id", user.id);
     setSaving(false);
     if (error) {
@@ -426,6 +429,19 @@ export default function Settings() {
                     placeholder="https://example.com/avatar.png"
                     className="font-mono text-sm"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bio" className="font-mono text-xs">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell others a little about yourself…"
+                    className="font-mono text-sm resize-none"
+                    rows={3}
+                    maxLength={200}
+                  />
+                  <p className="text-[10px] text-muted-foreground">{bio.length}/200 characters</p>
                 </div>
                 <Button onClick={saveProfile} disabled={saving} className="gap-2 font-mono text-xs">
                   <Save className="w-3.5 h-3.5" />
