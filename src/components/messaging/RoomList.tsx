@@ -39,7 +39,13 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
   const isRoomUserOnline = (room: ChatRoom) => {
     if (room.type !== "dm") return false;
     const profile = roomProfiles[room.id];
+    if (profile?.username === BOT_USERNAME) return true;
     return profile ? onlineUsers.has(profile.user_id) : false;
+  };
+
+  const isRoomBot = (room: ChatRoom) => {
+    if (room.type !== "dm") return false;
+    return roomProfiles[room.id]?.username === BOT_USERNAME;
   };
 
   return (

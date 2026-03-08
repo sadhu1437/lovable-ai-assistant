@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { RoomList } from "@/components/messaging/RoomList";
@@ -13,6 +14,7 @@ import {
   fetchUserRooms,
   fetchRoomMessages,
   fetchRoomMembers,
+  createBotDM,
   type ChatRoom,
   type ChatMessage,
   type UserProfile,
