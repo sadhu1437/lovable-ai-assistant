@@ -150,6 +150,9 @@ export default function Settings() {
             <TabsTrigger value="preferences" className="gap-1.5 font-mono text-xs">
               <Sliders className="w-3.5 h-3.5" /> Preferences
             </TabsTrigger>
+            <TabsTrigger value="cache" className="gap-1.5 font-mono text-xs">
+              <Database className="w-3.5 h-3.5" /> Cache
+            </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
