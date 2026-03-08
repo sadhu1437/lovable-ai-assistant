@@ -1,8 +1,15 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 export function useTextToSpeech() {
   const [speaking, setSpeaking] = useState<string | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
 
   const speak = useCallback((text: string, id: string) => {
     if (speaking === id) {
@@ -13,7 +20,6 @@ export function useTextToSpeech() {
 
     window.speechSynthesis.cancel();
 
-    // Strip markdown-like syntax for cleaner speech
     const clean = text
       .replace(/```[\s\S]*?```/g, "code block")
       .replace(/`([^`]+)`/g, "$1")

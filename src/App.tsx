@@ -13,7 +13,15 @@ import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Messages from "./pages/Messages";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
