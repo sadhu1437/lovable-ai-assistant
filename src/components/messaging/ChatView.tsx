@@ -38,9 +38,10 @@ interface ChatViewProps {
   readBy: Record<string, string[]>;
   allRooms?: ChatRoom[];
   roomProfiles?: Record<string, UserProfile>;
+  onDeleteMessage?: (msgId: string) => void;
 }
 
-export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {} }: ChatViewProps) {
+export function ChatView({ room, messages, currentUserId, profiles, onBack, onlineUsers, typingUsers, setTyping, readBy, allRooms = [], roomProfiles = {}, onDeleteMessage }: ChatViewProps) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [botThinking, setBotThinking] = useState(false);
