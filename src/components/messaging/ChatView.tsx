@@ -274,21 +274,31 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                     />
                     {msg.message_type === "text" && msg.content && (
                       <button
+                        onClick={() => elevenLabs.play(msg.content || "", msg.id)}
+                        disabled={elevenLabs.loadingId === msg.id}
+                        className={`p-1 rounded transition-colors ${elevenLabs.playingId === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                        title={elevenLabs.playingId === msg.id ? "Stop" : "Play with AI voice"}
+                      >
+                        {elevenLabs.loadingId === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : elevenLabs.playingId === msg.id ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                    {msg.message_type === "text" && msg.content && (
+                      <button
                         onClick={() => speak(msg.content || "", msg.id)}
                         className={`p-1 rounded transition-colors ${speaking === msg.id ? "text-primary bg-primary/10" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
-                        title={speaking === msg.id ? "Stop" : "Read aloud"}
+                        title={speaking === msg.id ? "Stop browser TTS" : "Read aloud (browser)"}
                       >
                         {speaking === msg.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                       </button>
                     )}
                     {msg.message_type === "text" && msg.content && (
                       <button
-                        onClick={() => handleDownloadAudio(msg.content || "", msg.id)}
-                        disabled={downloadingAudio === msg.id}
-                        className={`p-1 rounded transition-colors ${downloadingAudio === msg.id ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
+                        onClick={() => elevenLabs.download(msg.content || "", msg.id)}
+                        disabled={elevenLabs.loadingId === msg.id}
+                        className={`p-1 rounded transition-colors ${elevenLabs.loadingId === msg.id ? "text-primary" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}`}
                         title="Download as audio"
                       >
-                        {downloadingAudio === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                        <Download className="w-3.5 h-3.5" />
                       </button>
                     )}
                     {msg.message_type === "text" && msg.content && (
