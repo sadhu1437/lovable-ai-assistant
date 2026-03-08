@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexusAI — Offline</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0d1117;
+      color: #ededed;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      padding: 1.5rem;
+    }
+    .container {
+      text-align: center;
+      max-width: 420px;
+    }
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      border-radius: 1rem;
+      background: linear-gradient(135deg, #1a2332, #0d1117);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 30px rgba(0, 255, 85, 0.15);
+      border: 1px solid rgba(0, 255, 85, 0.2);
+    }
+    .icon svg {
+      width: 40px;
+      height: 40px;
+      color: #00ff55;
+      opacity: 0.6;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    h1 span { color: #00ff55; }
+    p {
+      color: #6b7280;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+    button {
+      background: #00ff55;
+      color: #0d1117;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    .pulse {
+      width: 8px; height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 0.5rem;
+      animation: pulse 2s infinite;
+    }
+    .status {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+      </svg>
+    </div>
+    <h1>You're <span>Offline</span></h1>
+    <p>It looks like you've lost your internet connection. NexusAI needs an active connection to work. Please check your network and try again.</p>
+    <button onclick="window.location.reload()">Try Again</button>
+    <div class="status">
+      <span class="pulse"></span>
+      Waiting for connection…
+    </div>
+  </div>
+  <script>
+    window.addEventListener('online', () => window.location.reload());
+  </script>
+</body>
+</html>
