@@ -2,7 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2, Volume2, VolumeX, FileDown } from "lucide-react";
+import { Copy, Check, Zap, User, ThumbsUp, ThumbsDown, Download, Pencil, Loader2, Volume2, VolumeX, FileDown, Play, Square } from "lucide-react";
 import { useState } from "react";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { exportMessageAsPdf } from "@/lib/exportPdf";
