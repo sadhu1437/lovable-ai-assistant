@@ -282,7 +282,7 @@ export function ChatInput({ onSend, onFileUpload, isLoading, category, onCategor
           {/* Send button */}
           <button
             onClick={handleSubmit}
-            disabled={!input.trim() || isLoading}
+            disabled={(!input.trim() && !selectedFile) || isLoading}
             className="shrink-0 w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:glow-primary-strong transition-all"
           >
             {isLoading ? (
