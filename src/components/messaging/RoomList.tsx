@@ -132,16 +132,13 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
               <button
                 key={room.id}
                 onClick={() => handleClick(room.id)}
-                onMouseDown={() => startLongPress(room)}
-                onMouseUp={cancelLongPress}
-                onMouseLeave={cancelLongPress}
                 onTouchStart={() => startLongPress(room)}
                 onTouchEnd={cancelLongPress}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setDeleteRoom(room);
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left text-sm mb-1 transition-all select-none ${
+                className={`group w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left text-sm mb-1 transition-all select-none ${
                   activeRoomId === room.id
                     ? "bg-secondary text-foreground border border-primary/30"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -166,6 +163,18 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
                   <p className={`text-[10px] truncate ${isOnline ? "text-primary" : "text-muted-foreground"}`}>
                     {isRoomBot(room) ? "AI Assistant" : room.type === "group" ? "Group" : isOnline ? "Online" : "Offline"}
                   </p>
+                </div>
+                {/* Delete button visible on hover (desktop) */}
+                <div
+                  className="hidden group-hover:flex shrink-0 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteRoom(room);
+                  }}
+                  role="button"
+                  title="Delete conversation"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
                 </div>
               </button>
             );
