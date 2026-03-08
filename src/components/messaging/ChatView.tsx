@@ -335,6 +335,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                       >
                         {downloadingAudio === msg.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                       </button>
+                    )}
                     {msg.message_type === "text" && msg.content && (
                       <button
                         onClick={() => exportMessageAsPdf({
