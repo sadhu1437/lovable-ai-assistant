@@ -276,7 +276,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           const avatar = getAvatar(msg.sender_id);
           const msgReactions = reactions[msg.id] || [];
           return (
-            <div key={msg.id} className={`group flex gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
+            <div key={msg.id} className={`group flex gap-2 ${isMe ? "flex-row-reverse" : ""}`} tabIndex={0}>
               <div className="w-7 h-7 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0 mt-1">
                 {avatar ? (
                   <img src={avatar} alt="" className="w-full h-full object-cover" />
@@ -332,7 +332,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                   )}
                   {/* Actions - appears on hover */}
                   {editingMsgId !== msg.id && (
-                    <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                    <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 md:opacity-100 transition-opacity`}>
                       <ReactionPicker
                         onSelect={(emoji) => toggleReaction(msg.id, emoji)}
                         align={isMe ? "right" : "left"}
