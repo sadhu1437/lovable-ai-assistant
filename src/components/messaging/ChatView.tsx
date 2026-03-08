@@ -171,7 +171,9 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                       : "bg-secondary text-foreground rounded-bl-sm"
                   }`}
                 >
-                  {msg.message_type === "image" && msg.media_url ? (
+                  {msg.message_type === "voice" && msg.media_url ? (
+                    <VoicePlayer url={msg.media_url} label={msg.content || undefined} />
+                  ) : msg.message_type === "image" && msg.media_url ? (
                     <img src={msg.media_url} alt={msg.content || ""} className="rounded-lg max-w-full max-h-60" />
                   ) : msg.message_type === "file" && msg.media_url ? (
                     <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="underline flex items-center gap-1">
