@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Loader2, Mic, MicOff } from "lucide-react";
-import { categories } from "@/lib/chat";
+import { Send, Loader2, Mic, MicOff, ChevronDown } from "lucide-react";
+import { categories, aiModels } from "@/lib/chat";
 import { toast } from "sonner";
 
 interface ChatInputProps {
@@ -8,13 +8,17 @@ interface ChatInputProps {
   isLoading: boolean;
   category: string;
   onCategoryChange: (cat: string) => void;
+  model: string;
+  onModelChange: (model: string) => void;
 }
 
-export function ChatInput({ onSend, isLoading, category, onCategoryChange }: ChatInputProps) {
+export function ChatInput({ onSend, isLoading, category, onCategoryChange, model, onModelChange }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [modelOpen, setModelOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -22,6 +26,17 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange }: Cha
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + "px";
     }
   }, [input]);
+
+  // Close model dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
+        setModelOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const handleSubmit = () => {
     if (!input.trim() || isLoading) return;
@@ -86,7 +101,6 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange }: Cha
     setIsListening(true);
   }, [isListening]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
@@ -95,24 +109,75 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange }: Cha
     };
   }, []);
 
+  const selectedModel = aiModels.find((m) => m.id === model) || aiModels[0];
+
   return (
     <div className="border-t border-border bg-background/80 backdrop-blur-xl">
       <div className="max-w-3xl mx-auto px-4 py-3">
-        {/* Category chips */}
-        <div className="flex gap-2 mb-3 overflow-x-auto pb-1 scrollbar-none">
-          {categories.map((cat) => (
+        {/* Category chips + Model selector row */}
+        <div className="flex items-center gap-3 mb-3">
+          {/* Category chips */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => onCategoryChange(cat.id)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium font-mono transition-all ${
+                  category === cat.id
+                    ? "bg-primary text-primary-foreground glow-primary"
+                    : "bg-secondary text-secondary-foreground hover:bg-muted"
+                }`}
+              >
+                {cat.icon} {cat.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Model selector */}
+          <div className="relative shrink-0" ref={modelDropdownRef}>
             <button
-              key={cat.id}
-              onClick={() => onCategoryChange(cat.id)}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium font-mono transition-all ${
-                category === cat.id
-                  ? "bg-primary text-primary-foreground glow-primary"
-                  : "bg-secondary text-secondary-foreground hover:bg-muted"
-              }`}
+              onClick={() => setModelOpen(!modelOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium font-mono bg-accent text-accent-foreground hover:bg-accent/80 transition-all border border-border"
             >
-              {cat.icon} {cat.label}
+              <span>{selectedModel.icon}</span>
+              <span className="hidden sm:inline">{selectedModel.label}</span>
+              <span className="sm:hidden">{selectedModel.provider}</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${modelOpen ? "rotate-180" : ""}`} />
             </button>
-          ))}
+
+            {modelOpen && (
+              <div className="absolute bottom-full right-0 mb-2 w-72 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
+                <div className="p-2 border-b border-border">
+                  <p className="text-[10px] font-mono text-muted-foreground px-2 py-1">SELECT AI MODEL</p>
+                </div>
+                <div className="max-h-64 overflow-y-auto p-1">
+                  {aiModels.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => { onModelChange(m.id); setModelOpen(false); }}
+                      className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-start gap-3 ${
+                        model === m.id
+                          ? "bg-primary/10 text-foreground"
+                          : "hover:bg-secondary text-foreground"
+                      }`}
+                    >
+                      <span className="text-base mt-0.5">{m.icon}</span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{m.label}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground px-1.5 py-0.5 rounded bg-secondary">{m.provider}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{m.description}</p>
+                      </div>
+                      {model === m.id && (
+                        <span className="ml-auto text-primary text-xs mt-1">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Input area */}
@@ -158,7 +223,7 @@ export function ChatInput({ onSend, isLoading, category, onCategoryChange }: Cha
           </button>
         </div>
         <p className="text-[10px] text-muted-foreground text-center mt-2 font-mono">
-          NexusAI • Powered by advanced AI • Fast & unlimited
+          NexusAI • {selectedModel.label} ({selectedModel.provider}) • Fast & unlimited
         </p>
       </div>
     </div>

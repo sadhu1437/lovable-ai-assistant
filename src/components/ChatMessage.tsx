@@ -212,6 +212,32 @@ export function ChatMessage({ message, onEditImage, isEditingImage }: ChatMessag
                 </div>
               )}
 
+              {/* Generated Video */}
+              {message.videoUrl && (
+                <div className="mt-4">
+                  <div className="relative group rounded-xl overflow-hidden border border-border inline-block">
+                    <img
+                      src={message.videoUrl}
+                      alt="Video preview frame"
+                      className="max-w-full max-h-[512px] rounded-xl object-contain"
+                    />
+                    <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm">
+                      <span className="text-xs font-mono text-foreground">🎬 Video Preview</span>
+                    </div>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <a
+                        href={message.videoUrl}
+                        download="nexusai-video-preview.png"
+                        className="p-2 rounded-lg bg-background/80 backdrop-blur-sm text-foreground hover:bg-background transition-colors"
+                        title="Download preview"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Like / Dislike buttons */}
               <div className="flex items-center gap-1 mt-4 pt-2">
                 <button
