@@ -33,6 +33,7 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusDraft, setStatusDraft] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!open || !userId) return;
