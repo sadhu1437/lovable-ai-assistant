@@ -757,30 +757,33 @@ const Index = () => {
             {/* Chat header with export */}
             <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/50 backdrop-blur-sm">
               <h2 className="text-sm font-mono text-foreground truncate">{activeConv.title}</h2>
-              <div className="relative">
-                <button
-                  onClick={() => setShowExportMenu(!showExportMenu)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                </button>
-                {showExportMenu && (
-                  <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 overflow-hidden">
-                    <button
-                      onClick={() => { exportAsMarkdown(activeConv); setShowExportMenu(false); }}
-                      className="w-full px-4 py-2.5 text-left text-xs font-mono text-foreground hover:bg-secondary transition-colors"
-                    >
-                      📄 Export as Markdown
-                    </button>
-                    <button
-                      onClick={() => { exportAsPdf(activeConv); setShowExportMenu(false); }}
-                      className="w-full px-4 py-2.5 text-left text-xs font-mono text-foreground hover:bg-secondary transition-colors border-t border-border"
-                    >
-                      📑 Export as PDF
-                    </button>
-                  </div>
-                )}
+              <div className="flex items-center gap-2">
+                <VoiceSelector value={tts.voiceId} onChange={tts.setVoiceId} />
+                <div className="relative">
+                  <button
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Export
+                  </button>
+                  {showExportMenu && (
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 overflow-hidden">
+                      <button
+                        onClick={() => { exportAsMarkdown(activeConv); setShowExportMenu(false); }}
+                        className="w-full px-4 py-2.5 text-left text-xs font-mono text-foreground hover:bg-secondary transition-colors"
+                      >
+                        📄 Export as Markdown
+                      </button>
+                      <button
+                        onClick={() => { exportAsPdf(activeConv); setShowExportMenu(false); }}
+                        className="w-full px-4 py-2.5 text-left text-xs font-mono text-foreground hover:bg-secondary transition-colors border-t border-border"
+                      >
+                        📑 Export as PDF
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -792,6 +795,12 @@ const Index = () => {
                   onCanvasEdit={handleCanvasEdit}
                   isEditingImage={isEditingImage}
                   isEditingCode={isEditingCode}
+                  elevenLabs={{
+                    play: tts.play,
+                    download: tts.download,
+                    loadingId: tts.loadingId,
+                    playingId: tts.playingId,
+                  }}
                 />
               ))}
               {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && <TypingIndicator />}
