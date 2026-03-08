@@ -214,18 +214,54 @@ export function ChatInput({ onSend, onFileUpload, isLoading, category, onCategor
           </div>
         </div>
 
+        {/* File preview */}
+        {selectedFile && (
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary border border-border max-w-xs">
+              {filePreviewUrl ? (
+                <img src={filePreviewUrl} alt="Preview" className="w-10 h-10 rounded object-cover" />
+              ) : (
+                <FileText className="w-5 h-5 text-primary shrink-0" />
+              )}
+              <div className="min-w-0">
+                <p className="text-xs font-mono text-foreground truncate">{selectedFile.name}</p>
+                <p className="text-[10px] text-muted-foreground">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+              </div>
+              <button onClick={clearFile} className="shrink-0 text-muted-foreground hover:text-destructive transition-colors">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Input area */}
         <div className={`relative flex items-end gap-2 bg-card border rounded-xl p-2 transition-all ${
           isListening
             ? "border-primary glow-primary"
             : "border-border focus-within:border-primary/50 focus-within:glow-primary"
         }`}>
+          {/* File upload button */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileSelect}
+            className="hidden"
+            accept="image/*,.txt,.md,.json,.csv,.js,.ts,.tsx,.jsx,.py,.html,.css,.xml,.yaml,.yml,.log,.pdf,.doc,.docx"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+            title="Upload file or image"
+          >
+            <Paperclip className="w-4 h-4" />
+          </button>
+
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isListening ? "Listening..." : "Ask NexusAI anything..."}
+            placeholder={selectedFile ? "Add a note about this file (optional)..." : isListening ? "Listening..." : "Ask NexusAI anything..."}
             rows={1}
             className="flex-1 bg-transparent resize-none text-foreground placeholder:text-muted-foreground outline-none px-2 py-1.5 text-sm max-h-[200px]"
           />
