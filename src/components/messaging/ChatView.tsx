@@ -803,5 +803,6 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 }
