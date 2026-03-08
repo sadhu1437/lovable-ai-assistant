@@ -246,7 +246,6 @@ export function ChatInput({ onSend, onFileUpload, isLoading, category, onCategor
             type="file"
             onChange={handleFileSelect}
             className="hidden"
-            accept="image/*,.txt,.md,.json,.csv,.js,.ts,.tsx,.jsx,.py,.html,.css,.xml,.yaml,.yml,.log,.pdf,.doc,.docx"
           />
           <button
             onClick={() => fileInputRef.current?.click()}

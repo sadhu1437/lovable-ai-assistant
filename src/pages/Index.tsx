@@ -5,7 +5,7 @@ import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
-import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo, analyzeFile, readFileAsDataUrl, readFileAsText } from "@/lib/chat";
+import { streamChat, generateId, isImageRequest, isVideoRequest, generateImage, generateVideo, analyzeFile, readFileAsDataUrl, readFileAsText, guessFileType } from "@/lib/chat";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -364,18 +364,24 @@ const Index = () => {
     }
 
     const isImage = file.type.startsWith("image/");
+    const isBinary = file.type.startsWith("application/pdf") || 
+                     file.type.startsWith("application/vnd") ||
+                     file.type.startsWith("application/msword") ||
+                     file.name.endsWith(".pdf") || file.name.endsWith(".doc") || file.name.endsWith(".docx");
     let fileContent: string;
     let dataUrl: string | undefined;
+    const fileType = file.type || guessFileType(file.name);
 
     try {
-      if (isImage) {
+      if (isImage || isBinary) {
         fileContent = await readFileAsDataUrl(file);
-        dataUrl = fileContent;
+        dataUrl = isImage ? fileContent : undefined;
       } else {
         fileContent = await readFileAsText(file);
       }
-    } catch {
-      toast.error("Failed to read file");
+    } catch (err) {
+      console.error("File read error:", err);
+      toast.error("Failed to read file. Try a different format.");
       return;
     }
 
@@ -383,7 +389,7 @@ const Index = () => {
       id: generateId(),
       role: "user",
       content: prompt ? `📎 **${file.name}** — ${prompt}` : `📎 **${file.name}**`,
-      filePreview: { name: file.name, type: file.type, isImage, dataUrl },
+      filePreview: { name: file.name, type: fileType, isImage, dataUrl },
       timestamp: new Date(),
     };
 
@@ -407,7 +413,7 @@ const Index = () => {
 
     await analyzeFile({
       fileName: file.name,
-      fileType: file.type,
+      fileType,
       fileContent,
       userPrompt: prompt,
       onDelta: (delta) => {
