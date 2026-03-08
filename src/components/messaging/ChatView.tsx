@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square, Pencil, Pin, PinOff, Check, X, MoreVertical, SmilePlus } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Send, Paperclip, Users, ArrowLeft, Bot, Forward, Trash2, Volume2, VolumeX, FileDown, Download, Loader2, Play, Square, Pencil, Pin, PinOff, Check, X, MoreVertical, SmilePlus, Reply } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage, ChatRoom, UserProfile } from "@/lib/messaging";
@@ -13,6 +13,9 @@ import { ReadReceiptIcon } from "./ReadReceiptIcon";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { VoicePlayer } from "./VoicePlayer";
 import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
+import { ReplyPreview, QuotedMessage } from "./ReplyPreview";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,10 +65,12 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const [deleteMsg, setDeleteMsg] = useState<ChatMessage | null>(null);
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
   const { speaking, speak } = useTextToSpeech();
@@ -84,7 +89,6 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
 
   const handleTyping = useCallback((value: string) => {
     setText(value);
-    // Show @mention dropdown when user types @ at word boundary
     const cursorMatch = value.match(/(^|\s)@(\w{0,10})$/);
     setShowMention(!!cursorMatch);
     if (value.trim()) {
@@ -97,19 +101,19 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   }, [setTyping]);
 
   const insertMention = useCallback(() => {
-    setText((prev) => {
-      // Replace the partial @... at the end with @nexusai
-      const replaced = prev.replace(/(^|\s)@\w{0,10}$/, "$1@nexusai ");
-      return replaced;
-    });
+    setText((prev) => prev.replace(/(^|\s)@\w{0,10}$/, "$1@nexusai "));
     setShowMention(false);
   }, []);
 
   const isBotRoom = useCallback(() => {
-    // Only check the roomProfiles entry for this specific room (reliable DM member lookup)
     const roomProfile = roomProfiles[room.id];
     return roomProfile?.username === BOT_USERNAME;
   }, [roomProfiles, room.id]);
+
+  const handleReply = useCallback((msg: ChatMessage) => {
+    setReplyTo(msg);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -117,19 +121,18 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     setSending(true);
     setText("");
     setTyping(false);
+    const replyToId = replyTo?.id;
+    setReplyTo(null);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    const { error } = await sendMessage(room.id, currentUserId, trimmed);
+    const { error } = await sendMessage(room.id, currentUserId, trimmed, "text", undefined, replyToId);
     if (error) { toast.error("Failed to send message"); setSending(false); return; }
     setSending(false);
 
-    // Auto-trigger bot reply in bot DMs or when @nexusai is mentioned
     const mentionsBot = /(?:^|\s)@nexusai\b/i.test(trimmed);
     const botRoom = isBotRoom();
     if (botRoom || mentionsBot) {
       setBotThinking(true);
-      const cleanPrompt = botRoom
-        ? trimmed
-        : trimmed.replace(/@nexusai/gi, "").trim();
+      const cleanPrompt = botRoom ? trimmed : trimmed.replace(/@nexusai/gi, "").trim();
       if (cleanPrompt) {
         const { error: botErr } = await triggerBotReply(room.id, cleanPrompt);
         if (botErr) toast.error("Bot failed to reply");
@@ -165,14 +168,6 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     if (!editingMsgId || !editText.trim()) { setEditingMsgId(null); return; }
     const { error } = await editChatMessage(editingMsgId, editText.trim());
     if (error) { toast.error("Failed to edit message"); }
-    else {
-      // Update locally
-      const updated = messages.map((m) =>
-        m.id === editingMsgId ? { ...m, content: editText.trim(), edited_at: new Date().toISOString() } : m
-      );
-      // We need to trigger a re-render through parent; for now optimistic update via messages state
-      // The realtime subscription will also eventually sync
-    }
     setEditingMsgId(null);
   };
 
@@ -196,7 +191,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     e.target.value = "";
   };
 
-  // Build a userId→profile lookup once (O(1) per access instead of O(n))
+  // Build a userId→profile lookup once
   const profileByUserId = useCallback(() => {
     const map: Record<string, UserProfile> = {};
     for (const p of Object.values(profiles)) {
@@ -217,7 +212,14 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const getAvatar = useCallback((userId: string) => {
     return profileByUserId[userId]?.avatar_url;
   }, [profileByUserId]);
-  // Prefer roomProfiles (accurate per-room member) over global profiles to avoid cross-room contamination
+
+  // Message lookup for reply_to
+  const messageById = useMemo(() => {
+    const map: Record<string, ChatMessage> = {};
+    for (const m of messages) map[m.id] = m;
+    return map;
+  }, [messages]);
+
   const otherUser = roomProfiles[room.id] || Object.values(profileByUserId).find((p) => p.user_id !== currentUserId) || null;
   const isBot = roomProfiles[room.id]?.username === BOT_USERNAME;
   const roomName = room.type === "group" ? room.name || "Unnamed Group" : otherUser?.display_name || "Chat";
@@ -225,6 +227,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const isOtherOnline = isBot ? true : (otherUserId ? onlineUsers.has(otherUserId) : false);
 
   const typingNames = Array.from(typingUsers).map((uid) => getDisplayName(uid));
+  const typingAvatars = Array.from(typingUsers).map((uid) => getAvatar(uid) || null);
 
   const getReadStatus = (msgId: string) => {
     return (readBy[msgId] || []).length > 0;
@@ -238,6 +241,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     if (isBot) return "AI Assistant • Always Online";
     if (isOtherOnline) return "Online";
     return "Offline";
+  };
+
+  const scrollToMessage = (msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary/40");
+      setTimeout(() => el.classList.remove("ring-2", "ring-primary/40"), 2000);
+    }
   };
 
   return (
@@ -308,8 +320,9 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
           const avatar = getAvatar(msg.sender_id);
           const msgReactions = reactions[msg.id] || [];
           const isMsgBot = isBotMessage(msg.sender_id);
+          const repliedMsg = msg.reply_to ? messageById[msg.reply_to] : null;
           return (
-            <div key={msg.id} className={`group flex gap-2 ${isMe ? "flex-row-reverse" : ""}`} tabIndex={0}>
+            <div key={msg.id} id={`msg-${msg.id}`} className={`group flex gap-2 ${isMe ? "flex-row-reverse" : ""} transition-all rounded-lg`} tabIndex={0}>
               <div className={`w-7 h-7 rounded-full ${isMsgBot ? "bg-primary/20 border-primary/40" : "bg-secondary border-border"} border flex items-center justify-center overflow-hidden shrink-0 mt-1`}>
                 {isMsgBot ? (
                   <Bot className="w-3.5 h-3.5 text-primary" />
@@ -353,6 +366,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                           : "bg-secondary text-foreground rounded-bl-sm"
                       } ${msg.pinned_at ? "ring-1 ring-primary/40" : ""}`}
                     >
+                      {/* Quoted reply */}
+                      {repliedMsg && (
+                        <QuotedMessage
+                          content={repliedMsg.content}
+                          senderName={getDisplayName(repliedMsg.sender_id)}
+                          messageType={repliedMsg.message_type}
+                          onClick={() => scrollToMessage(repliedMsg.id)}
+                        />
+                      )}
                       {msg.pinned_at && (
                         <p className="text-[9px] opacity-60 mb-0.5 flex items-center gap-0.5"><Pin className="w-2.5 h-2.5" /> Pinned</p>
                       )}
@@ -364,6 +386,10 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                         <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="underline flex items-center gap-1">
                           <Paperclip className="w-3 h-3" /> {msg.content}
                         </a>
+                      ) : isMsgBot ? (
+                        <div className={`prose prose-sm max-w-none ${isMe ? "prose-invert" : "dark:prose-invert"} [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_pre]:my-1 [&_code]:text-xs [&_code]:bg-background/20 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_blockquote]:border-primary/40 [&_a]:text-primary`}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || ""}</ReactMarkdown>
+                        </div>
                       ) : (
                         <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                       )}
@@ -375,6 +401,13 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                   {/* Actions - appears on hover */}
                   {editingMsgId !== msg.id && (
                     <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity`}>
+                      <button
+                        onClick={() => handleReply(msg)}
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Reply"
+                      >
+                        <Reply className="w-3.5 h-3.5" />
+                      </button>
                       <ReactionPicker
                         onSelect={(emoji) => toggleReaction(msg.id, emoji)}
                         align={isMe ? "right" : "left"}
@@ -406,6 +439,9 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                             }
                           }}
                         >
+                          <DropdownMenuItem onClick={() => handleReply(msg)}>
+                            <Reply className="w-3.5 h-3.5 mr-2" /> Reply
+                          </DropdownMenuItem>
                           {isMe && canEditMsg(msg) && msg.message_type === "text" && (
                             <DropdownMenuItem onClick={() => startEditMsg(msg)}>
                               <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
@@ -473,8 +509,8 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             </div>
           );
         })}
-        {botThinking && <TypingBubble names={["NexusAI Bot"]} />}
-        <TypingBubble names={typingNames} />
+        {botThinking && <TypingBubble names={["NexusAI Bot"]} avatars={[null]} />}
+        <TypingBubble names={typingNames} avatars={typingAvatars} />
       </div>
 
       {/* Input */}
@@ -497,18 +533,35 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             </button>
           </div>
         )}
+
+        {/* Reply preview */}
+        {replyTo && (
+          <div className="mb-2">
+            <ReplyPreview
+              message={replyTo}
+              senderName={getDisplayName(replyTo.sender_id)}
+              onCancel={() => setReplyTo(null)}
+            />
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileUpload} />
           <Button variant="ghost" size="icon" className="shrink-0" onClick={() => fileInputRef.current?.click()}>
             <Paperclip className="w-4 h-4" />
           </Button>
           <Input
+            ref={inputRef}
             value={text}
             onChange={(e) => handleTyping(e.target.value)}
             onKeyDown={(e) => {
               if (showMention && (e.key === "Tab" || e.key === "Enter")) {
                 e.preventDefault();
                 insertMention();
+                return;
+              }
+              if (e.key === "Escape" && replyTo) {
+                setReplyTo(null);
                 return;
               }
               if (e.key === "Enter" && !e.shiftKey) handleSend();
