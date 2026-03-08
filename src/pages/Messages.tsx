@@ -12,6 +12,7 @@ import { MessageSearch } from "@/components/messaging/MessageSearch";
 import { ChatView } from "@/components/messaging/ChatView";
 import { NewChatDialog } from "@/components/messaging/NewChatDialog";
 import { usePresence, useReadReceipts } from "@/hooks/usePresence";
+import { CallHistory } from "@/components/messaging/CallHistory";
 import {
   fetchUserRooms,
   fetchRoomMessages,
