@@ -12,6 +12,8 @@ import { OnlineIndicator } from "./OnlineIndicator";
 import { ReadReceiptIcon } from "./ReadReceiptIcon";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { VoicePlayer } from "./VoicePlayer";
+import { ReactionDisplay, ReactionPicker } from "./EmojiReactions";
+import { useReactions } from "@/hooks/useReactions";
 
 interface ChatViewProps {
   room: ChatRoom;
@@ -31,6 +33,15 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { reactions, loadReactions, toggleReaction } = useReactions(room.id, currentUserId);
+
+  // Load reactions when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      loadReactions(messages.map((m) => m.id));
+    }
+  }, [messages, loadReactions]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -87,15 +98,12 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   const otherUserId = otherUser?.user_id;
   const isOtherOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
 
-  // Typing indicator names
   const typingNames = Array.from(typingUsers).map((uid) => getDisplayName(uid));
 
-  // Find last read message for read receipts
   const getReadStatus = (msgId: string) => {
     return (readBy[msgId] || []).length > 0;
   };
 
-  // Status text for header
   const getStatusText = () => {
     if (room.type === "group") {
       const onlineCount = Array.from(onlineUsers).length;
@@ -149,8 +157,9 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUserId;
           const avatar = getAvatar(msg.sender_id);
+          const msgReactions = reactions[msg.id] || [];
           return (
-            <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
+            <div key={msg.id} className={`group flex gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
               <div className="w-7 h-7 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0 mt-1">
                 {avatar ? (
                   <img src={avatar} alt="" className="w-full h-full object-cover" />
@@ -164,25 +173,39 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
                 {!isMe && room.type === "group" && (
                   <p className="text-[10px] text-muted-foreground font-mono mb-0.5">{getDisplayName(msg.sender_id)}</p>
                 )}
-                <div
-                  className={`rounded-2xl px-3 py-2 text-sm ${
-                    isMe
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-secondary text-foreground rounded-bl-sm"
-                  }`}
-                >
-                  {msg.message_type === "voice" && msg.media_url ? (
-                    <VoicePlayer url={msg.media_url} label={msg.content || undefined} />
-                  ) : msg.message_type === "image" && msg.media_url ? (
-                    <img src={msg.media_url} alt={msg.content || ""} className="rounded-lg max-w-full max-h-60" />
-                  ) : msg.message_type === "file" && msg.media_url ? (
-                    <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="underline flex items-center gap-1">
-                      <Paperclip className="w-3 h-3" /> {msg.content}
-                    </a>
-                  ) : (
-                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                  )}
+                <div className="relative">
+                  <div
+                    className={`rounded-2xl px-3 py-2 text-sm ${
+                      isMe
+                        ? "bg-primary text-primary-foreground rounded-br-sm"
+                        : "bg-secondary text-foreground rounded-bl-sm"
+                    }`}
+                  >
+                    {msg.message_type === "voice" && msg.media_url ? (
+                      <VoicePlayer url={msg.media_url} label={msg.content || undefined} />
+                    ) : msg.message_type === "image" && msg.media_url ? (
+                      <img src={msg.media_url} alt={msg.content || ""} className="rounded-lg max-w-full max-h-60" />
+                    ) : msg.message_type === "file" && msg.media_url ? (
+                      <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="underline flex items-center gap-1">
+                        <Paperclip className="w-3 h-3" /> {msg.content}
+                      </a>
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    )}
+                  </div>
+                  {/* Reaction picker - appears on hover */}
+                  <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full" : "right-0 translate-x-full"} px-1`}>
+                    <ReactionPicker
+                      onSelect={(emoji) => toggleReaction(msg.id, emoji)}
+                      align={isMe ? "right" : "left"}
+                    />
+                  </div>
                 </div>
+                {/* Reaction display */}
+                <ReactionDisplay
+                  reactions={msgReactions}
+                  onToggle={(emoji) => toggleReaction(msg.id, emoji)}
+                />
                 <p className={`text-[9px] text-muted-foreground mt-0.5 flex items-center ${isMe ? "justify-end" : ""}`}>
                   {format(new Date(msg.created_at), "HH:mm")}
                   {isMe && <ReadReceiptIcon isRead={getReadStatus(msg.id)} />}
