@@ -27,8 +27,30 @@ const queryClient = new QueryClient({
 });
 
 const PageLoader = () => (
-  <div className="h-screen flex items-center justify-center bg-background">
-    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  <div className="h-screen flex flex-col bg-background">
+    {/* Sidebar skeleton */}
+    <div className="flex h-full">
+      <div className="hidden md:flex w-64 flex-col border-r border-border p-4 gap-4">
+        <div className="h-8 w-32 rounded-lg bg-muted animate-pulse" />
+        <div className="h-9 w-full rounded-lg bg-muted animate-pulse" />
+        <div className="space-y-2 mt-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-8 rounded-lg bg-muted animate-pulse" style={{ opacity: 1 - i * 0.15 }} />
+          ))}
+        </div>
+      </div>
+      {/* Main content skeleton */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6">
+        <div className="w-14 h-14 rounded-2xl bg-primary/20 animate-pulse" />
+        <div className="h-6 w-40 rounded bg-muted animate-pulse" />
+        <div className="h-4 w-64 rounded bg-muted animate-pulse" />
+        <div className="flex gap-2 mt-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-8 w-20 rounded-full bg-muted animate-pulse" />
+          ))}
+        </div>
+      </div>
+    </div>
   </div>
 );
 
