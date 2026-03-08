@@ -85,12 +85,10 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
   }, [setTyping]);
 
   const isBotRoom = useCallback(() => {
-    // Check both profiles (from messages) and roomProfiles (from room members)
-    const other = Object.values(profiles).find((p) => p.user_id !== currentUserId);
-    if (other?.username === BOT_USERNAME) return true;
+    // Only check the roomProfiles entry for this specific room (reliable DM member lookup)
     const roomProfile = roomProfiles[room.id];
     return roomProfile?.username === BOT_USERNAME;
-  }, [profiles, roomProfiles, room.id, currentUserId]);
+  }, [roomProfiles, room.id]);
 
   const handleSend = async () => {
     const trimmed = text.trim();
