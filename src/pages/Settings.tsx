@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, User, Cpu, Sliders } from "lucide-react";
+import { ArrowLeft, Save, User, Cpu, Sliders, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +41,8 @@ export default function Settings() {
   );
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) {
@@ -81,6 +83,34 @@ export default function Settings() {
     localStorage.setItem("nexus-send-enter", String(sendOnEnter));
     localStorage.setItem("nexus-stream", String(streamResponses));
     toast.success("Preferences saved");
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2MB");
+      return;
+    }
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/avatar.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) {
+      toast.error("Upload failed");
+      setUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+    const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+    setAvatarUrl(publicUrl);
+    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("user_id", user.id);
+    toast.success("Avatar uploaded");
+    setUploading(false);
   };
 
   if (loading) {
@@ -127,14 +157,36 @@ export default function Settings() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4 mb-2">
-                  <div className="w-14 h-14 rounded-full bg-secondary border border-border flex items-center justify-center text-xl font-mono text-foreground overflow-hidden">
+                  <div
+                    className="w-14 h-14 rounded-full bg-secondary border border-border flex items-center justify-center text-xl font-mono text-foreground overflow-hidden relative group cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
                     ) : (
                       (displayName || user?.email || "U")[0].toUpperCase()
                     )}
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                      <Upload className="w-4 h-4 text-white" />
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
                   </div>
-                  <div className="text-sm text-muted-foreground">{user?.email}</div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">{user?.email}</div>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="text-xs text-primary hover:underline mt-0.5"
+                    >
+                      {uploading ? "Uploading…" : "Upload photo"}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="displayName" className="font-mono text-xs">Display Name</Label>
