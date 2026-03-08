@@ -102,6 +102,17 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
     }
   };
 
+  const handleDeleteMessage = async () => {
+    if (!deleteMsg) return;
+    const { error } = await supabase.from("chat_messages").delete().eq("id", deleteMsg.id);
+    if (error) { toast.error("Failed to delete message"); }
+    else {
+      setMessages((prev) => prev.filter((m) => m.id !== deleteMsg.id));
+      toast.success("Message deleted");
+    }
+    setDeleteMsg(null);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
