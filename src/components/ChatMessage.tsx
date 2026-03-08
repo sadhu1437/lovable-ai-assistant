@@ -26,7 +26,7 @@ export function ChatMessage({ message }: { message: Message }) {
         }`}>
           {isUser ? <User className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <p className="text-xs font-mono text-muted-foreground mb-1.5">
             {isUser ? "You" : "NexusAI"}
           </p>
@@ -39,7 +39,15 @@ export function ChatMessage({ message }: { message: Message }) {
               prose-a:text-primary prose-a:no-underline hover:prose-a:underline
               prose-pre:bg-transparent prose-pre:p-0
               prose-blockquote:border-primary prose-blockquote:border-l-2
-              prose-li:marker:text-primary">
+              prose-li:marker:text-primary
+              prose-table:border-collapse prose-table:w-full
+              prose-th:border prose-th:border-border prose-th:bg-secondary prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:text-foreground prose-th:font-semibold prose-th:text-xs prose-th:font-mono
+              prose-td:border prose-td:border-border prose-td:px-3 prose-td:py-2 prose-td:text-sm
+              prose-p:leading-relaxed prose-p:text-foreground
+              prose-ul:space-y-1 prose-ol:space-y-1
+              prose-h1:text-lg prose-h1:font-bold prose-h1:mt-6 prose-h1:mb-3
+              prose-h2:text-base prose-h2:font-bold prose-h2:mt-5 prose-h2:mb-2
+              prose-h3:text-sm prose-h3:font-semibold prose-h3:mt-4 prose-h3:mb-2">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -80,6 +88,39 @@ export function ChatMessage({ message }: { message: Message }) {
                       <code className={className} {...props}>
                         {children}
                       </code>
+                    );
+                  },
+                  table({ children }) {
+                    return (
+                      <div className="overflow-x-auto my-4 rounded-lg border border-border">
+                        <table className="w-full border-collapse text-sm">
+                          {children}
+                        </table>
+                      </div>
+                    );
+                  },
+                  thead({ children }) {
+                    return <thead className="bg-secondary">{children}</thead>;
+                  },
+                  th({ children }) {
+                    return (
+                      <th className="px-4 py-2.5 text-left text-xs font-mono font-semibold text-foreground border-b border-border">
+                        {children}
+                      </th>
+                    );
+                  },
+                  td({ children }) {
+                    return (
+                      <td className="px-4 py-2.5 text-sm text-foreground border-b border-border">
+                        {children}
+                      </td>
+                    );
+                  },
+                  tr({ children }) {
+                    return (
+                      <tr className="hover:bg-secondary/50 transition-colors">
+                        {children}
+                      </tr>
                     );
                   },
                 }}

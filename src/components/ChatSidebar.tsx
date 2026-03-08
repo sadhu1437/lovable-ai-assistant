@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, Trash2, LogOut } from "lucide-react";
+import { Plus, MessageSquare, Trash2 } from "lucide-react";
 import type { Conversation } from "@/lib/chat";
 
 interface ChatSidebarProps {
@@ -7,11 +7,9 @@ interface ChatSidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
-  userEmail?: string;
-  onSignOut?: () => void;
 }
 
-export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, userEmail, onSignOut }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete }: ChatSidebarProps) {
   return (
     <div className="w-64 h-full bg-card border-r border-border flex flex-col">
       {/* Header */}
@@ -59,23 +57,6 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
           ))
         )}
       </div>
-
-      {/* User section */}
-      {userEmail && (
-        <div className="p-3 border-t border-border">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs font-mono text-secondary-foreground">
-              {userEmail[0].toUpperCase()}
-            </div>
-            <span className="flex-1 text-xs text-muted-foreground truncate">{userEmail}</span>
-            {onSignOut && (
-              <button onClick={onSignOut} className="text-muted-foreground hover:text-destructive transition-colors" title="Sign out">
-                <LogOut className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
