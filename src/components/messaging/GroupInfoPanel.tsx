@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Users, Crown, Shield, UserPlus, UserMinus, ChevronUp, ChevronDown, X, Info, MessageCircle } from "lucide-react";
+import { Users, Crown, Shield, UserPlus, UserMinus, ChevronUp, ChevronDown, X, Info, MessageCircle, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { OnlineIndicator } from "./OnlineIndicator";
-import { searchUsers, fetchProfilesByUserIds, type ChatRoom, type UserProfile, type ChatRoomMember } from "@/lib/messaging";
+import { searchUsers, fetchProfilesByUserIds, BOT_USERNAME, type ChatRoom, type UserProfile, type ChatRoomMember } from "@/lib/messaging";
 import {
   Sheet,
   SheetContent,
@@ -226,13 +226,14 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                     const name = profile?.display_name || profile?.username || "Unknown";
                     const avatar = profile?.avatar_url;
                     const isAdminMember = member.role === "admin";
+                    const isBot = profile?.username === BOT_USERNAME;
 
                     return (
                       <div
                         key={member.id}
-                        className={`flex items-start gap-2.5 px-2 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group ${!isCurrentUser && onStartDM ? "cursor-pointer" : ""}`}
+                        className={`flex items-start gap-2.5 px-2 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group ${!isCurrentUser && !isBot && onStartDM ? "cursor-pointer" : ""}`}
                         onClick={() => {
-                          if (!isCurrentUser && onStartDM) {
+                          if (!isCurrentUser && !isBot && onStartDM) {
                             onStartDM(member.user_id);
                             setOpen(false);
                           }
@@ -241,7 +242,9 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                         {/* Avatar */}
                         <div className="relative shrink-0">
                           <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden">
-                            {avatar ? (
+                            {isBot ? (
+                              <Bot className="w-4 h-4 text-primary" />
+                            ) : avatar ? (
                               <img src={avatar} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <span className="text-xs font-mono text-foreground font-semibold">
@@ -249,7 +252,7 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                               </span>
                             )}
                           </div>
-                          <OnlineIndicator isOnline={isOnline} />
+                          {!isBot && <OnlineIndicator isOnline={isOnline} />}
                         </div>
 
                         {/* Info */}
@@ -259,7 +262,12 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                               {name}
                               {isCurrentUser && <span className="text-muted-foreground"> (You)</span>}
                             </p>
-                            {isAdminMember && (
+                            {isBot && (
+                              <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25 shrink-0">
+                                Bot
+                              </span>
+                            )}
+                            {isAdminMember && !isBot && (
                               <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/25 shrink-0">
                                 Admin
                               </span>
@@ -268,7 +276,7 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                           {profile?.username && (
                             <p className="text-[10px] text-muted-foreground font-mono">@{profile.username}</p>
                           )}
-                          {profile?.bio && (
+                          {profile?.bio && !isBot && (
                             <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{profile.bio}</p>
                           )}
                         </div>
@@ -276,7 +284,17 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                         {/* Actions */}
                         {!isCurrentUser && (
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                            {onStartDM && (
+                            {/* Any member can remove the bot */}
+                            {isBot && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setRemoveTarget({ member, profile }); }}
+                                className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                title="Remove bot from group"
+                              >
+                                <UserMinus className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {!isBot && onStartDM && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); onStartDM(member.user_id); setOpen(false); }}
                                 className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
@@ -285,7 +303,7 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                                 <MessageCircle className="w-3.5 h-3.5" />
                               </button>
                             )}
-                            {isAdmin && (
+                            {isAdmin && !isBot && (
                               <>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); toggleRole({ member, profile }); }}
