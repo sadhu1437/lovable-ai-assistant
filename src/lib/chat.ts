@@ -327,3 +327,22 @@ export function readFileAsText(file: File): Promise<string> {
     reader.readAsText(file);
   });
 }
+
+export function guessFileType(fileName: string): string {
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+  const map: Record<string, string> = {
+    txt: "text/plain", md: "text/markdown", json: "application/json",
+    csv: "text/csv", js: "text/javascript", ts: "text/typescript",
+    tsx: "text/tsx", jsx: "text/jsx", py: "text/x-python",
+    html: "text/html", css: "text/css", xml: "text/xml",
+    yaml: "text/yaml", yml: "text/yaml", log: "text/plain",
+    pdf: "application/pdf", doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+    gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
+    java: "text/x-java", c: "text/x-c", cpp: "text/x-c++",
+    rb: "text/x-ruby", go: "text/x-go", rs: "text/x-rust",
+    sql: "text/x-sql", sh: "text/x-shellscript",
+  };
+  return map[ext] || "application/octet-stream";
+}
