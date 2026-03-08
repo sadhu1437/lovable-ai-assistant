@@ -12,6 +12,8 @@ import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { useElevenLabsTTS } from "@/hooks/useElevenLabsTTS";
+import { VoiceSelector } from "@/components/messaging/VoiceSelector";
 import {
   loadConversations,
   loadMessages,
