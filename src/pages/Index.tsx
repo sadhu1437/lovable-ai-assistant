@@ -396,6 +396,7 @@ const Index = () => {
     }
   };
 
+  const handleEditImage = async (sourceImage: string, editPrompt: string) => {
     if (!activeId) return;
     const convId = activeId;
 
