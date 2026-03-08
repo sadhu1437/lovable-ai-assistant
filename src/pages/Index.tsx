@@ -662,7 +662,9 @@ const Index = () => {
                   key={msg.id}
                   message={msg}
                   onEditImage={handleEditImage}
+                  onCanvasEdit={handleCanvasEdit}
                   isEditingImage={isEditingImage}
+                  isEditingCode={isEditingCode}
                 />
               ))}
               {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && <TypingIndicator />}
