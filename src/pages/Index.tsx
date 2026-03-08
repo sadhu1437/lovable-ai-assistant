@@ -16,6 +16,8 @@ const Index = () => {
   const [category, setCategory] = useState("general");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
 
   const activeConv = conversations.find((c) => c.id === activeId) || null;
 
@@ -25,26 +27,22 @@ const Index = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [activeConv?.messages.length, scrollToBottom]);
-
-  const createConversation = (firstMessage?: string): string => {
-    const id = generateId();
-    const conv: Conversation = {
-      id,
-      title: firstMessage?.slice(0, 40) || "New Chat",
-      messages: [],
-      category,
-      createdAt: new Date(),
-    };
-    setConversations((prev) => [conv, ...prev]);
-    setActiveId(id);
-    return id;
-  };
+  }, [activeConv?.messages, scrollToBottom]);
 
   const sendMessage = async (content: string) => {
-    let convId = activeId;
-    if (!convId) {
-      convId = createConversation(content);
+    const convId = activeId || generateId();
+    const isNew = !activeId;
+
+    if (isNew) {
+      const conv: Conversation = {
+        id: convId,
+        title: content.slice(0, 40),
+        messages: [],
+        category,
+        createdAt: new Date(),
+      };
+      setConversations((prev) => [conv, ...prev]);
+      setActiveId(convId);
     }
 
     const userMsg: Message = {
@@ -57,20 +55,22 @@ const Index = () => {
     setConversations((prev) =>
       prev.map((c) =>
         c.id === convId
-          ? { ...c, messages: [...c.messages, userMsg], title: c.messages.length === 0 ? content.slice(0, 40) : c.title }
+          ? {
+              ...c,
+              messages: [...c.messages, userMsg],
+              title: c.messages.length === 0 ? content.slice(0, 40) : c.title,
+            }
           : c
       )
     );
 
     setIsLoading(true);
-    let assistantContent = "";
     const assistantId = generateId();
 
+    // Build message history from the ref to avoid stale closure
+    const existingMessages = conversationsRef.current.find((c) => c.id === convId)?.messages || [];
     const allMessages = [
-      ...(conversations.find((c) => c.id === convId)?.messages || []).map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
+      ...existingMessages.map((m) => ({ role: m.role, content: m.content })),
       { role: "user" as const, content },
     ];
 
@@ -78,17 +78,25 @@ const Index = () => {
       messages: allMessages,
       category,
       onDelta: (delta) => {
-        assistantContent += delta;
-        const currentContent = assistantContent;
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== convId) return c;
-            const msgs = c.messages.filter((m) => m.id !== assistantId);
+            const existingAssistant = c.messages.find((m) => m.id === assistantId);
+            if (existingAssistant) {
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, content: m.content + delta }
+                    : m
+                ),
+              };
+            }
             return {
               ...c,
               messages: [
-                ...msgs,
-                { id: assistantId, role: "assistant", content: currentContent, timestamp: new Date() },
+                ...c.messages,
+                { id: assistantId, role: "assistant" as const, content: delta, timestamp: new Date() },
               ],
             };
           })
@@ -148,12 +156,11 @@ const Index = () => {
           </>
         ) : (
           <>
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto">
               {activeConv.messages.map((msg) => (
                 <ChatMessage key={msg.id} message={msg} />
               ))}
-              {isLoading && !activeConv.messages.some(m => m.role === "assistant" && m.id) && (
+              {isLoading && !activeConv.messages.some((m) => m.role === "assistant") && (
                 <TypingIndicator />
               )}
               <div ref={messagesEndRef} />
