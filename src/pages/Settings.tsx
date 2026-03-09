@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, User, Cpu, Sliders, Upload, Database, Trash2, HardDrive } from "lucide-react";
+import { ArrowLeft, Save, User, Cpu, Sliders, Upload, Database, Trash2, HardDrive, Ban, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -358,6 +358,9 @@ export default function Settings() {
             <TabsTrigger value="preferences" className="gap-1.5 font-mono text-xs">
               <Sliders className="w-3.5 h-3.5" /> Preferences
             </TabsTrigger>
+            <TabsTrigger value="blocked" className="gap-1.5 font-mono text-xs">
+              <Ban className="w-3.5 h-3.5" /> Blocked
+            </TabsTrigger>
             <TabsTrigger value="cache" className="gap-1.5 font-mono text-xs">
               <Database className="w-3.5 h-3.5" /> Cache
             </TabsTrigger>
@@ -545,6 +548,11 @@ export default function Settings() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Blocked Users Tab */}
+          <TabsContent value="blocked">
+            <BlockedUsersPanel userId={user?.id} />
           </TabsContent>
 
           {/* Cache Tab */}
