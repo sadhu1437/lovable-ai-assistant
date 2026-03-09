@@ -85,44 +85,59 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
 
   // Store the latest offer so we can re-send when callee signals ready
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
+  const channelReadyRef = useRef(false);
 
   const setupSignalingChannel = useCallback(
-    (cId: string) => {
-      const channel = supabase.channel(`call:${cId}`, {
-        config: { broadcast: { self: false } },
+    (cId: string): Promise<ReturnType<typeof supabase.channel>> => {
+      return new Promise((resolve) => {
+        const channel = supabase.channel(`call:${cId}`, {
+          config: { broadcast: { self: false } },
+        });
+
+        channel
+          .on("broadcast", { event: "offer" }, async ({ payload }) => {
+            if (!pcRef.current) return;
+            try {
+              await pcRef.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+              const answer = await pcRef.current.createAnswer();
+              await pcRef.current.setLocalDescription(answer);
+              channel.send({ type: "broadcast", event: "answer", payload: { sdp: answer } });
+            } catch (err) {
+              console.error("Error handling offer:", err);
+            }
+          })
+          .on("broadcast", { event: "answer" }, async ({ payload }) => {
+            if (!pcRef.current) return;
+            try {
+              await pcRef.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+            } catch (err) {
+              console.error("Error handling answer:", err);
+            }
+          })
+          .on("broadcast", { event: "ice-candidate" }, async ({ payload }) => {
+            if (!pcRef.current) return;
+            try {
+              await pcRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            } catch {}
+          })
+          .on("broadcast", { event: "hang-up" }, () => {
+            endCall();
+          })
+          .on("broadcast", { event: "ready" }, () => {
+            // Callee is ready — re-send the offer
+            if (pendingOfferRef.current) {
+              channel.send({ type: "broadcast", event: "offer", payload: { sdp: pendingOfferRef.current } });
+            }
+          })
+          .subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              channelReadyRef.current = true;
+              resolve(channel);
+            }
+          });
+
+        channelRef.current = channel;
       });
-
-      channel
-        .on("broadcast", { event: "offer" }, async ({ payload }) => {
-          if (!pcRef.current) return;
-          await pcRef.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-          const answer = await pcRef.current.createAnswer();
-          await pcRef.current.setLocalDescription(answer);
-          channel.send({ type: "broadcast", event: "answer", payload: { sdp: answer } });
-        })
-        .on("broadcast", { event: "answer" }, async ({ payload }) => {
-          if (!pcRef.current) return;
-          await pcRef.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-        })
-        .on("broadcast", { event: "ice-candidate" }, async ({ payload }) => {
-          if (!pcRef.current) return;
-          try {
-            await pcRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
-          } catch {}
-        })
-        .on("broadcast", { event: "hang-up" }, () => {
-          endCall();
-        })
-        .on("broadcast", { event: "ready" }, () => {
-          // Callee is ready — re-send the offer
-          if (pendingOfferRef.current) {
-            channel.send({ type: "broadcast", event: "offer", payload: { sdp: pendingOfferRef.current } });
-          }
-        })
-        .subscribe();
-
-      channelRef.current = channel;
-      return channel;
     },
     []
   );
