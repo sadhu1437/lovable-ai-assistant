@@ -19,3 +19,14 @@ export function prefetchRoute(path: string) {
     loader();
   }
 }
+
+// Prefetch likely next routes after idle
+export function prefetchOnIdle(paths: string[]) {
+  if ("requestIdleCallback" in window) {
+    (window as any).requestIdleCallback(() => {
+      paths.forEach(prefetchRoute);
+    });
+  } else {
+    setTimeout(() => paths.forEach(prefetchRoute), 2000);
+  }
+}
