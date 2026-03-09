@@ -621,14 +621,19 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   // Reject incoming call
   const rejectCall = useCallback(
     async (cId: string) => {
-      await supabase
-        .from("calls")
-        .update({ status: "rejected", ended_at: new Date().toISOString() } as any)
-        .eq("id", cId);
-      const channel = supabase.channel(`call:${cId}`);
-      channel.send({ type: "broadcast", event: "hang-up", payload: {} });
-      supabase.removeChannel(channel);
-      setCallStatus("idle");
+      isEndingRef.current = true;
+      try {
+        await supabase
+          .from("calls")
+          .update({ status: "rejected", ended_at: new Date().toISOString() } as any)
+          .eq("id", cId);
+        const channel = supabase.channel(`call:${cId}`);
+        channel.send({ type: "broadcast", event: "hang-up", payload: {} });
+        supabase.removeChannel(channel);
+        setCallStatus("idle");
+      } finally {
+        isEndingRef.current = false;
+      }
     },
     []
   );
