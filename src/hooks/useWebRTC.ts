@@ -41,8 +41,11 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const callRowChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const callIdRef = useRef<string | null>(null);
+  const hasActivatedRef = useRef(false);
+  const isEndingRef = useRef(false);
 
   const cleanup = useCallback(() => {
     if (durationTimerRef.current) {
@@ -65,12 +68,21 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
+    if (callRowChannelRef.current) {
+      supabase.removeChannel(callRowChannelRef.current);
+      callRowChannelRef.current = null;
+    }
+
     remoteStreamRef.current = new MediaStream();
     setCallDuration(0);
     setIsMuted(false);
     setIsVideoOff(false);
     setParticipantCount(0);
     callIdRef.current = null;
+    pendingOfferRef.current = null;
+    channelReadyRef.current = false;
+    hasActivatedRef.current = false;
+    isEndingRef.current = false;
   }, []);
 
   const getMediaStream = useCallback(async (type: CallType) => {
@@ -142,52 +154,86 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     []
   );
 
-  const createPeerConnection = useCallback((channel: ReturnType<typeof supabase.channel>) => {
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+  const activateCall = useCallback(() => {
+    if (hasActivatedRef.current) return;
+    hasActivatedRef.current = true;
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        channel.send({
-          type: "broadcast",
-          event: "ice-candidate",
-          payload: { candidate: event.candidate.toJSON() },
-        });
-      }
-    };
+    setCallStatus("active");
 
-    pc.ontrack = (event) => {
-      event.streams[0]?.getTracks().forEach((track) => {
-        remoteStreamRef.current.addTrack(track);
-      });
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStreamRef.current;
-      }
-    };
+    if (!durationTimerRef.current) {
+      durationTimerRef.current = setInterval(() => {
+        setCallDuration((d) => d + 1);
+      }, 1000);
+    }
 
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "connected") {
-        setCallStatus("active");
-        if (!durationTimerRef.current) {
-          durationTimerRef.current = setInterval(() => {
-            setCallDuration((d) => d + 1);
-          }, 1000);
-        }
-        if (callIdRef.current) {
-          supabase
-            .from("calls")
-            .update({ status: "active", started_at: new Date().toISOString() } as any)
-            .eq("id", callIdRef.current)
-            .then(() => {});
-        }
-      }
-      if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
-        endCall();
-      }
-    };
-
-    pcRef.current = pc;
-    return pc;
+    const cId = callIdRef.current;
+    if (cId) {
+      supabase
+        .from("calls")
+        .update({ status: "active", started_at: new Date().toISOString() } as any)
+        .eq("id", cId)
+        .then(() => {});
+    }
   }, []);
+
+  const endCallLocalOnly = useCallback(() => {
+    cleanup();
+    setCallStatus("ended");
+    setCallId(null);
+    setRemoteUserId(null);
+    setIsGroupCall(false);
+    onCallEnded?.();
+    setTimeout(() => setCallStatus("idle"), 1500);
+  }, [cleanup, onCallEnded]);
+
+  const createPeerConnection = useCallback(
+    (channel: ReturnType<typeof supabase.channel>) => {
+      const pc = new RTCPeerConnection(ICE_SERVERS);
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          channel.send({
+            type: "broadcast",
+            event: "ice-candidate",
+            payload: { candidate: event.candidate.toJSON() },
+          });
+        }
+      };
+
+      pc.ontrack = (event) => {
+        event.streams[0]?.getTracks().forEach((track) => {
+          // Avoid duplicates (Safari can re-fire tracks)
+          if (!remoteStreamRef.current.getTracks().find((t) => t.id === track.id)) {
+            remoteStreamRef.current.addTrack(track);
+          }
+        });
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        }
+        // If media is flowing, we can safely start the timer
+        activateCall();
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        if (["connected", "completed"].includes(pc.iceConnectionState)) {
+          activateCall();
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "connected") {
+          activateCall();
+        }
+        if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
+          endCall();
+        }
+      };
+
+      pcRef.current = pc;
+      return pc;
+    },
+    [activateCall]
+  );
 
   // ───── GROUP CALL LOGIC (mesh) ─────
 
@@ -318,6 +364,39 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
 
   // ───── PUBLIC API ─────
 
+  const subscribeToCallRow = useCallback(
+    (cId: string) => {
+      if (callRowChannelRef.current) {
+        supabase.removeChannel(callRowChannelRef.current);
+        callRowChannelRef.current = null;
+      }
+
+      const ch = supabase
+        .channel(`call-row:${cId}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "calls", filter: `id=eq.${cId}` },
+          (payload) => {
+            if (isEndingRef.current) return;
+            const call = payload.new as any;
+            const status = call?.status as string | undefined;
+            if (!status) return;
+
+            if (status === "active") {
+              activateCall();
+            }
+            if (["ended", "missed", "rejected"].includes(status)) {
+              endCallLocalOnly();
+            }
+          }
+        )
+        .subscribe();
+
+      callRowChannelRef.current = ch;
+    },
+    [activateCall, endCallLocalOnly]
+  );
+
   // Start a 1:1 call
   const startCall = useCallback(
     async (roomId: string, targetUserId: string, type: CallType) => {
@@ -344,6 +423,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         const cId = (callData as any).id;
         setCallId(cId);
         callIdRef.current = cId;
+        subscribeToCallRow(cId);
+        setCallStatus("ringing");
 
         const stream = await getMediaStream(type);
         localStreamRef.current = stream;
@@ -360,10 +441,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         channel.send({ type: "broadcast", event: "offer", payload: { sdp: offer } });
 
         setTimeout(() => {
-          if (pcRef.current?.connectionState !== "connected") {
-            if (callIdRef.current === cId) {
-              endCall("missed");
-            }
+          if (!hasActivatedRef.current && callIdRef.current === cId) {
+            endCall("missed");
           }
         }, 30000);
       } catch (err) {
@@ -373,7 +452,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         throw err;
       }
     },
-    [currentUserId, getMediaStream, setupSignalingChannel, createPeerConnection, cleanup]
+    [currentUserId, getMediaStream, setupSignalingChannel, createPeerConnection, subscribeToCallRow, cleanup]
   );
 
   // Start a group call
@@ -472,8 +551,9 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         setCallId(cId);
         callIdRef.current = cId;
         setCallType(type);
-        setCallStatus("active");
+        setCallStatus("ringing");
         setIsGroupCall(false);
+        subscribeToCallRow(cId);
 
         const stream = await getMediaStream(type);
         localStreamRef.current = stream;
@@ -483,10 +563,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         const pc = createPeerConnection(channel);
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-        await supabase
-          .from("calls")
-          .update({ status: "active", started_at: new Date().toISOString() } as any)
-          .eq("id", cId);
+        // Mark call as accepted (timer starts when media/ICE connects)
+        await supabase.from("calls").update({ status: "active" } as any).eq("id", cId);
 
         // Signal the caller that we're ready to receive the offer (channel is confirmed subscribed)
         channel.send({ type: "broadcast", event: "ready", payload: {} });
@@ -497,40 +575,45 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         throw err;
       }
     },
-    [getMediaStream, setupSignalingChannel, createPeerConnection, cleanup]
+    [getMediaStream, setupSignalingChannel, createPeerConnection, subscribeToCallRow, cleanup]
   );
 
   // End the call
   const endCall = useCallback(
     async (reason: string = "ended") => {
-      const cId = callIdRef.current;
-      if (cId) {
-        await supabase
-          .from("calls")
-          .update({ status: reason, ended_at: new Date().toISOString() } as any)
-          .eq("id", cId);
+      isEndingRef.current = true;
+      try {
+        const cId = callIdRef.current;
+        if (cId) {
+          await supabase
+            .from("calls")
+            .update({ status: reason, ended_at: new Date().toISOString() } as any)
+            .eq("id", cId);
 
-        // Update participant left_at
-        await supabase
-          .from("call_participants")
-          .update({ left_at: new Date().toISOString() } as any)
-          .eq("call_id", cId)
-          .eq("user_id", currentUserId);
-      }
-      if (channelRef.current) {
-        if (isGroupCall) {
-          channelRef.current.send({ type: "broadcast", event: "leave", payload: { userId: currentUserId } });
-        } else {
-          channelRef.current.send({ type: "broadcast", event: "hang-up", payload: {} });
+          // Update participant left_at
+          await supabase
+            .from("call_participants")
+            .update({ left_at: new Date().toISOString() } as any)
+            .eq("call_id", cId)
+            .eq("user_id", currentUserId);
         }
+        if (channelRef.current) {
+          if (isGroupCall) {
+            channelRef.current.send({ type: "broadcast", event: "leave", payload: { userId: currentUserId } });
+          } else {
+            channelRef.current.send({ type: "broadcast", event: "hang-up", payload: {} });
+          }
+        }
+        cleanup();
+        setCallStatus("ended");
+        setCallId(null);
+        setRemoteUserId(null);
+        setIsGroupCall(false);
+        onCallEnded?.();
+        setTimeout(() => setCallStatus("idle"), 1500);
+      } finally {
+        isEndingRef.current = false;
       }
-      cleanup();
-      setCallStatus("ended");
-      setCallId(null);
-      setRemoteUserId(null);
-      setIsGroupCall(false);
-      onCallEnded?.();
-      setTimeout(() => setCallStatus("idle"), 1500);
     },
     [currentUserId, cleanup, onCallEnded, isGroupCall]
   );
@@ -538,14 +621,19 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   // Reject incoming call
   const rejectCall = useCallback(
     async (cId: string) => {
-      await supabase
-        .from("calls")
-        .update({ status: "rejected", ended_at: new Date().toISOString() } as any)
-        .eq("id", cId);
-      const channel = supabase.channel(`call:${cId}`);
-      channel.send({ type: "broadcast", event: "hang-up", payload: {} });
-      supabase.removeChannel(channel);
-      setCallStatus("idle");
+      isEndingRef.current = true;
+      try {
+        await supabase
+          .from("calls")
+          .update({ status: "rejected", ended_at: new Date().toISOString() } as any)
+          .eq("id", cId);
+        const channel = supabase.channel(`call:${cId}`);
+        channel.send({ type: "broadcast", event: "hang-up", payload: {} });
+        supabase.removeChannel(channel);
+        setCallStatus("idle");
+      } finally {
+        isEndingRef.current = false;
+      }
     },
     []
   );
