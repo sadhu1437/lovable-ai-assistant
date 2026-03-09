@@ -78,6 +78,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     setIsVideoOff(false);
     setParticipantCount(0);
     callIdRef.current = null;
+    pendingOfferRef.current = null;
+    channelReadyRef.current = false;
     hasActivatedRef.current = false;
   }, []);
 
