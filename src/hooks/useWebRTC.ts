@@ -41,8 +41,10 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const callRowChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const callIdRef = useRef<string | null>(null);
+  const hasActivatedRef = useRef(false);
 
   const cleanup = useCallback(() => {
     if (durationTimerRef.current) {
@@ -65,12 +67,18 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
+    if (callRowChannelRef.current) {
+      supabase.removeChannel(callRowChannelRef.current);
+      callRowChannelRef.current = null;
+    }
+
     remoteStreamRef.current = new MediaStream();
     setCallDuration(0);
     setIsMuted(false);
     setIsVideoOff(false);
     setParticipantCount(0);
     callIdRef.current = null;
+    hasActivatedRef.current = false;
   }, []);
 
   const getMediaStream = useCallback(async (type: CallType) => {
