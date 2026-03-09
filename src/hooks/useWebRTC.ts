@@ -152,52 +152,86 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     []
   );
 
-  const createPeerConnection = useCallback((channel: ReturnType<typeof supabase.channel>) => {
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+  const activateCall = useCallback(() => {
+    if (hasActivatedRef.current) return;
+    hasActivatedRef.current = true;
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        channel.send({
-          type: "broadcast",
-          event: "ice-candidate",
-          payload: { candidate: event.candidate.toJSON() },
-        });
-      }
-    };
+    setCallStatus("active");
 
-    pc.ontrack = (event) => {
-      event.streams[0]?.getTracks().forEach((track) => {
-        remoteStreamRef.current.addTrack(track);
-      });
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStreamRef.current;
-      }
-    };
+    if (!durationTimerRef.current) {
+      durationTimerRef.current = setInterval(() => {
+        setCallDuration((d) => d + 1);
+      }, 1000);
+    }
 
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "connected") {
-        setCallStatus("active");
-        if (!durationTimerRef.current) {
-          durationTimerRef.current = setInterval(() => {
-            setCallDuration((d) => d + 1);
-          }, 1000);
-        }
-        if (callIdRef.current) {
-          supabase
-            .from("calls")
-            .update({ status: "active", started_at: new Date().toISOString() } as any)
-            .eq("id", callIdRef.current)
-            .then(() => {});
-        }
-      }
-      if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
-        endCall();
-      }
-    };
-
-    pcRef.current = pc;
-    return pc;
+    const cId = callIdRef.current;
+    if (cId) {
+      supabase
+        .from("calls")
+        .update({ status: "active", started_at: new Date().toISOString() } as any)
+        .eq("id", cId)
+        .then(() => {});
+    }
   }, []);
+
+  const endCallLocalOnly = useCallback(() => {
+    cleanup();
+    setCallStatus("ended");
+    setCallId(null);
+    setRemoteUserId(null);
+    setIsGroupCall(false);
+    onCallEnded?.();
+    setTimeout(() => setCallStatus("idle"), 1500);
+  }, [cleanup, onCallEnded]);
+
+  const createPeerConnection = useCallback(
+    (channel: ReturnType<typeof supabase.channel>) => {
+      const pc = new RTCPeerConnection(ICE_SERVERS);
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          channel.send({
+            type: "broadcast",
+            event: "ice-candidate",
+            payload: { candidate: event.candidate.toJSON() },
+          });
+        }
+      };
+
+      pc.ontrack = (event) => {
+        event.streams[0]?.getTracks().forEach((track) => {
+          // Avoid duplicates (Safari can re-fire tracks)
+          if (!remoteStreamRef.current.getTracks().find((t) => t.id === track.id)) {
+            remoteStreamRef.current.addTrack(track);
+          }
+        });
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        }
+        // If media is flowing, we can safely start the timer
+        activateCall();
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        if (["connected", "completed"].includes(pc.iceConnectionState)) {
+          activateCall();
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "connected") {
+          activateCall();
+        }
+        if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
+          endCall();
+        }
+      };
+
+      pcRef.current = pc;
+      return pc;
+    },
+    [activateCall]
+  );
 
   // ───── GROUP CALL LOGIC (mesh) ─────
 
