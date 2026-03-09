@@ -452,7 +452,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         throw err;
       }
     },
-    [currentUserId, getMediaStream, setupSignalingChannel, createPeerConnection, cleanup]
+    [currentUserId, getMediaStream, setupSignalingChannel, createPeerConnection, subscribeToCallRow, cleanup]
   );
 
   // Start a group call
