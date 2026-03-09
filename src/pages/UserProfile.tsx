@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Clock, MessageSquare, Camera, Loader2, Pencil, Check, X, Calendar, AtSign, Shield } from "lucide-react";
+import { ArrowLeft, User, Clock, MessageSquare, Camera, Loader2, Pencil, Check, X, Calendar, AtSign, Shield, Ban, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,12 @@ export default function UserProfile() {
   const [statusDraft, setStatusDraft] = useState("");
   const [bioDraft, setBioDraft] = useState("");
   const [startingDM, setStartingDM] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState("inappropriate");
+  const [reportDescription, setReportDescription] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const presence = usePresence(user?.id, null);
 
@@ -53,6 +59,18 @@ export default function UserProfile() {
         setLoading(false);
       });
   }, [userId]);
+
+  // Check if user is blocked
+  useEffect(() => {
+    if (!user?.id || !userId || isMe) return;
+    supabase
+      .from("blocked_users")
+      .select("id")
+      .eq("blocker_id", user.id)
+      .eq("blocked_id", userId)
+      .maybeSingle()
+      .then(({ data }) => setIsBlocked(!!data));
+  }, [user?.id, userId, isMe]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -103,6 +121,40 @@ export default function UserProfile() {
     setStartingDM(false);
     if (roomId) {
       navigate("/messages");
+    }
+  };
+
+  const handleBlockToggle = async () => {
+    if (!user?.id || !userId || isMe) return;
+    setBlocking(true);
+    if (isBlocked) {
+      await supabase.from("blocked_users").delete().eq("blocker_id", user.id).eq("blocked_id", userId);
+      setIsBlocked(false);
+      toast.success("User unblocked");
+    } else {
+      await supabase.from("blocked_users").insert({ blocker_id: user.id, blocked_id: userId });
+      setIsBlocked(true);
+      toast.success("User blocked");
+    }
+    setBlocking(false);
+  };
+
+  const handleReport = async () => {
+    if (!user?.id || !userId || isMe) return;
+    setSubmittingReport(true);
+    const { error } = await supabase.from("user_reports").insert({
+      reporter_id: user.id,
+      reported_id: userId,
+      reason: reportReason,
+      description: reportDescription.trim() || null
+    });
+    setSubmittingReport(false);
+    if (error) {
+      toast.error("Failed to submit report");
+    } else {
+      toast.success("Report submitted");
+      setShowReportDialog(false);
+      setReportDescription("");
     }
   };
 
@@ -293,11 +345,10 @@ export default function UserProfile() {
 
         {/* Actions */}
         {!isMe && user && (
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap gap-3">
             <Button
-              className="w-full sm:w-auto"
               onClick={handleStartDM}
-              disabled={startingDM}
+              disabled={startingDM || isBlocked}
             >
               {startingDM ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -306,6 +357,69 @@ export default function UserProfile() {
               )}
               Send Message
             </Button>
+            <Button
+              variant={isBlocked ? "secondary" : "destructive"}
+              onClick={handleBlockToggle}
+              disabled={blocking}
+            >
+              {blocking ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Ban className="w-4 h-4 mr-2" />
+              )}
+              {isBlocked ? "Unblock" : "Block"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowReportDialog(true)}
+            >
+              <Flag className="w-4 h-4 mr-2" />
+              Report
+            </Button>
+          </div>
+        )}
+
+        {/* Report Dialog */}
+        {showReportDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="w-full max-w-md mx-4 p-6 rounded-lg bg-card border border-border shadow-xl">
+              <h3 className="text-lg font-semibold font-mono text-foreground mb-4">Report User</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-mono text-muted-foreground mb-1.5 block">Reason</label>
+                  <select
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="inappropriate">Inappropriate behavior</option>
+                    <option value="spam">Spam</option>
+                    <option value="harassment">Harassment</option>
+                    <option value="impersonation">Impersonation</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-mono text-muted-foreground mb-1.5 block">Description (optional)</label>
+                  <textarea
+                    value={reportDescription}
+                    onChange={(e) => setReportDescription(e.target.value)}
+                    placeholder="Provide additional details..."
+                    rows={3}
+                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground font-mono text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button onClick={handleReport} disabled={submittingReport} className="flex-1">
+                    {submittingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    Submit Report
+                  </Button>
+                  <Button variant="secondary" onClick={() => setShowReportDialog(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
