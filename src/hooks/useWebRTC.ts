@@ -349,7 +349,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         localStreamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-        const channel = setupSignalingChannel(cId);
+        const channel = await setupSignalingChannel(cId);
         const pc = createPeerConnection(channel);
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
@@ -479,7 +479,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         localStreamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-        const channel = setupSignalingChannel(cId);
+        const channel = await setupSignalingChannel(cId);
         const pc = createPeerConnection(channel);
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
@@ -488,10 +488,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
           .update({ status: "active", started_at: new Date().toISOString() } as any)
           .eq("id", cId);
 
-        // Signal the caller that we're ready to receive the offer
-        setTimeout(() => {
-          channel.send({ type: "broadcast", event: "ready", payload: {} });
-        }, 500);
+        // Signal the caller that we're ready to receive the offer (channel is confirmed subscribed)
+        channel.send({ type: "broadcast", event: "ready", payload: {} });
       } catch (err) {
         console.error("answerCall error:", err);
         cleanup();
