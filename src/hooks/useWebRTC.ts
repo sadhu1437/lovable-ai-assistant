@@ -575,40 +575,45 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         throw err;
       }
     },
-    [getMediaStream, setupSignalingChannel, createPeerConnection, cleanup]
+    [getMediaStream, setupSignalingChannel, createPeerConnection, subscribeToCallRow, cleanup]
   );
 
   // End the call
   const endCall = useCallback(
     async (reason: string = "ended") => {
-      const cId = callIdRef.current;
-      if (cId) {
-        await supabase
-          .from("calls")
-          .update({ status: reason, ended_at: new Date().toISOString() } as any)
-          .eq("id", cId);
+      isEndingRef.current = true;
+      try {
+        const cId = callIdRef.current;
+        if (cId) {
+          await supabase
+            .from("calls")
+            .update({ status: reason, ended_at: new Date().toISOString() } as any)
+            .eq("id", cId);
 
-        // Update participant left_at
-        await supabase
-          .from("call_participants")
-          .update({ left_at: new Date().toISOString() } as any)
-          .eq("call_id", cId)
-          .eq("user_id", currentUserId);
-      }
-      if (channelRef.current) {
-        if (isGroupCall) {
-          channelRef.current.send({ type: "broadcast", event: "leave", payload: { userId: currentUserId } });
-        } else {
-          channelRef.current.send({ type: "broadcast", event: "hang-up", payload: {} });
+          // Update participant left_at
+          await supabase
+            .from("call_participants")
+            .update({ left_at: new Date().toISOString() } as any)
+            .eq("call_id", cId)
+            .eq("user_id", currentUserId);
         }
+        if (channelRef.current) {
+          if (isGroupCall) {
+            channelRef.current.send({ type: "broadcast", event: "leave", payload: { userId: currentUserId } });
+          } else {
+            channelRef.current.send({ type: "broadcast", event: "hang-up", payload: {} });
+          }
+        }
+        cleanup();
+        setCallStatus("ended");
+        setCallId(null);
+        setRemoteUserId(null);
+        setIsGroupCall(false);
+        onCallEnded?.();
+        setTimeout(() => setCallStatus("idle"), 1500);
+      } finally {
+        isEndingRef.current = false;
       }
-      cleanup();
-      setCallStatus("ended");
-      setCallId(null);
-      setRemoteUserId(null);
-      setIsGroupCall(false);
-      onCallEnded?.();
-      setTimeout(() => setCallStatus("idle"), 1500);
     },
     [currentUserId, cleanup, onCallEnded, isGroupCall]
   );
