@@ -423,6 +423,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         const cId = (callData as any).id;
         setCallId(cId);
         callIdRef.current = cId;
+        subscribeToCallRow(cId);
+        setCallStatus("ringing");
 
         const stream = await getMediaStream(type);
         localStreamRef.current = stream;
