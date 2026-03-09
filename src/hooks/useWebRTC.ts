@@ -45,6 +45,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const callIdRef = useRef<string | null>(null);
   const hasActivatedRef = useRef(false);
+  const isEndingRef = useRef(false);
 
   const cleanup = useCallback(() => {
     if (durationTimerRef.current) {
