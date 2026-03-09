@@ -7,7 +7,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { NotificationProvider } from "@/hooks/useNotificationContext";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { prefetchOnIdle } from "@/lib/routePrefetch";
 
 const Index = lazy(() => import("./pages/Index"));
 const AuthPage = lazy(() => import("./pages/Auth"));
@@ -56,7 +57,13 @@ const PageLoader = () => (
   </div>
 );
 
-const App = () => (
+const App = () => {
+  // Prefetch likely routes on idle
+  useEffect(() => {
+    prefetchOnIdle(["/messages", "/settings"]);
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <NotificationProvider>
@@ -85,6 +92,7 @@ const App = () => (
     </NotificationProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

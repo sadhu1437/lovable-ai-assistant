@@ -50,9 +50,10 @@ export default function Messages() {
   const activeRoomIdRef = useRef(activeRoomId);
   activeRoomIdRef.current = activeRoomId;
 
-  // Fetch current user's username for mention detection
+  // Fetch current user's username for mention detection (parallel with loadRooms)
   useEffect(() => {
     if (!user) return;
+    // Fire-and-forget, don't block room loading
     fetchProfileByUserId(user.id).then((p) => {
       if (p?.username) setCurrentUsername(p.username);
     });
