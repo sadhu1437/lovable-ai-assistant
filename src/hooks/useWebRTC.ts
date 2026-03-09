@@ -82,6 +82,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     pendingOfferRef.current = null;
     channelReadyRef.current = false;
     hasActivatedRef.current = false;
+    isEndingRef.current = false;
   }, []);
 
   const getMediaStream = useCallback(async (type: CallType) => {
