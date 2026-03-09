@@ -227,6 +227,127 @@ function CacheStatsPanel() {
   );
 }
 
+interface BlockedUser {
+  id: string;
+  blocked_id: string;
+  created_at: string;
+  profile?: { display_name: string | null; username: string | null; avatar_url: string | null };
+}
+
+function BlockedUsersPanel({ userId }: { userId?: string }) {
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [unblocking, setUnblocking] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const fetchBlocked = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("blocked_users")
+      .select("id, blocked_id, created_at")
+      .eq("blocker_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (data && data.length > 0) {
+      // Fetch profiles for blocked users
+      const blockedIds = data.map((b) => b.blocked_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, username, avatar_url")
+        .in("user_id", blockedIds);
+
+      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+      setBlockedUsers(
+        data.map((b) => ({
+          ...b,
+          profile: profileMap.get(b.blocked_id) || undefined,
+        }))
+      );
+    } else {
+      setBlockedUsers([]);
+    }
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => {
+    fetchBlocked();
+  }, [fetchBlocked]);
+
+  const handleUnblock = async (blockedId: string) => {
+    if (!userId) return;
+    setUnblocking(blockedId);
+    await supabase.from("blocked_users").delete().eq("blocker_id", userId).eq("blocked_id", blockedId);
+    setBlockedUsers((prev) => prev.filter((b) => b.blocked_id !== blockedId));
+    setUnblocking(null);
+    toast.success("User unblocked");
+  };
+
+  return (
+    <Card className="border-border bg-card">
+      <CardHeader>
+        <CardTitle className="text-base font-mono">Blocked Users</CardTitle>
+        <CardDescription>Manage users you've blocked. Blocked users cannot message you.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : blockedUsers.length === 0 ? (
+          <div className="text-center py-8">
+            <Ban className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground font-mono">No blocked users</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {blockedUsers.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border"
+              >
+                <div
+                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/profile/${b.blocked_id}`)}
+                >
+                  <div className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden">
+                    {b.profile?.avatar_url ? (
+                      <img src={b.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-mono font-medium text-foreground">
+                      {b.profile?.display_name || b.profile?.username || "Unknown User"}
+                    </p>
+                    {b.profile?.username && (
+                      <p className="text-xs text-muted-foreground font-mono">@{b.profile.username}</p>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleUnblock(b.blocked_id)}
+                  disabled={unblocking === b.blocked_id}
+                  className="font-mono text-xs"
+                >
+                  {unblocking === b.blocked_id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    "Unblock"
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Settings() {
   const navigate = useNavigate();
   const { user } = useAuth();

@@ -83,6 +83,9 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
 
   // ───── 1:1 CALL LOGIC ─────
 
+  // Store the latest offer so we can re-send when callee signals ready
+  const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
+
   const setupSignalingChannel = useCallback(
     (cId: string) => {
       const channel = supabase.channel(`call:${cId}`, {
@@ -109,6 +112,12 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         })
         .on("broadcast", { event: "hang-up" }, () => {
           endCall();
+        })
+        .on("broadcast", { event: "ready" }, () => {
+          // Callee is ready — re-send the offer
+          if (pendingOfferRef.current) {
+            channel.send({ type: "broadcast", event: "offer", payload: { sdp: pendingOfferRef.current } });
+          }
         })
         .subscribe();
 
@@ -331,6 +340,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+        // Store the offer so it can be re-sent when callee signals ready
+        pendingOfferRef.current = offer;
         channel.send({ type: "broadcast", event: "offer", payload: { sdp: offer } });
 
         setTimeout(() => {
@@ -461,6 +472,11 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
           .from("calls")
           .update({ status: "active", started_at: new Date().toISOString() } as any)
           .eq("id", cId);
+
+        // Signal the caller that we're ready to receive the offer
+        setTimeout(() => {
+          channel.send({ type: "broadcast", event: "ready", payload: {} });
+        }, 500);
       } catch (err) {
         console.error("answerCall error:", err);
         cleanup();
