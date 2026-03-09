@@ -441,10 +441,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         channel.send({ type: "broadcast", event: "offer", payload: { sdp: offer } });
 
         setTimeout(() => {
-          if (pcRef.current?.connectionState !== "connected") {
-            if (callIdRef.current === cId) {
-              endCall("missed");
-            }
+          if (!hasActivatedRef.current && callIdRef.current === cId) {
+            endCall("missed");
           }
         }, 30000);
       } catch (err) {
