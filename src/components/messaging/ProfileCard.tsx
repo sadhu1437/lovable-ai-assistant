@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Clock, MessageSquare, Camera, Loader2, Pencil, Check, X, ExternalLink } from "lucide-react";
+import { User, Clock, MessageSquare, Camera, Loader2, Pencil, Check, X, ExternalLink, Ban, Flag } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { OnlineIndicator } from "./OnlineIndicator";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +32,8 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
   const [uploading, setUploading] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusDraft, setStatusDraft] = useState("");
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -45,7 +47,17 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
       .then(({ data }) => {
         if (data) setProfile(data as any);
       });
-  }, [open, userId]);
+    // Check block status
+    if (currentUserId && currentUserId !== userId) {
+      supabase
+        .from("blocked_users")
+        .select("id")
+        .eq("blocker_id", currentUserId)
+        .eq("blocked_id", userId)
+        .maybeSingle()
+        .then(({ data }) => setIsBlocked(!!data));
+    }
+  }, [open, userId, currentUserId]);
 
   const isOnline = onlineUsers?.has(userId);
   const isMe = currentUserId === userId;
@@ -81,6 +93,21 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
     setProfile((prev) => prev ? { ...prev, status_message: val } : prev);
     setEditingStatus(false);
     toast.success("Status updated");
+  };
+
+  const handleBlockToggle = async () => {
+    if (!currentUserId || isMe) return;
+    setBlocking(true);
+    if (isBlocked) {
+      await supabase.from("blocked_users").delete().eq("blocker_id", currentUserId).eq("blocked_id", userId);
+      setIsBlocked(false);
+      toast.success("User unblocked");
+    } else {
+      await supabase.from("blocked_users").insert({ blocker_id: currentUserId, blocked_id: userId });
+      setIsBlocked(true);
+      toast.success("User blocked");
+    }
+    setBlocking(false);
   };
 
   return (
@@ -217,10 +244,25 @@ export function ProfileCard({ userId, children, onlineUsers, onStartDM, currentU
                 {!isMe && onStartDM && (
                   <button
                     onClick={() => { onStartDM(userId); setOpen(false); }}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-mono font-medium hover:bg-primary/90 transition-colors"
+                    disabled={isBlocked}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-mono font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     Send Message
+                  </button>
+                )}
+                {!isMe && currentUserId && (
+                  <button
+                    onClick={handleBlockToggle}
+                    disabled={blocking}
+                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-mono font-medium transition-colors ${
+                      isBlocked 
+                        ? "bg-secondary text-foreground hover:bg-secondary/80" 
+                        : "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    }`}
+                  >
+                    {blocking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+                    {isBlocked ? "Unblock" : "Block"}
                   </button>
                 )}
                 <button
