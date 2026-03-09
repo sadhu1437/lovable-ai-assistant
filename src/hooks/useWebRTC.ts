@@ -551,8 +551,9 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         setCallId(cId);
         callIdRef.current = cId;
         setCallType(type);
-        setCallStatus("active");
+        setCallStatus("ringing");
         setIsGroupCall(false);
+        subscribeToCallRow(cId);
 
         const stream = await getMediaStream(type);
         localStreamRef.current = stream;
@@ -562,10 +563,8 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
         const pc = createPeerConnection(channel);
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-        await supabase
-          .from("calls")
-          .update({ status: "active", started_at: new Date().toISOString() } as any)
-          .eq("id", cId);
+        // Mark call as accepted (timer starts when media/ICE connects)
+        await supabase.from("calls").update({ status: "active" } as any).eq("id", cId);
 
         // Signal the caller that we're ready to receive the offer (channel is confirmed subscribed)
         channel.send({ type: "broadcast", event: "ready", payload: {} });
