@@ -364,6 +364,39 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
 
   // ───── PUBLIC API ─────
 
+  const subscribeToCallRow = useCallback(
+    (cId: string) => {
+      if (callRowChannelRef.current) {
+        supabase.removeChannel(callRowChannelRef.current);
+        callRowChannelRef.current = null;
+      }
+
+      const ch = supabase
+        .channel(`call-row:${cId}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "calls", filter: `id=eq.${cId}` },
+          (payload) => {
+            if (isEndingRef.current) return;
+            const call = payload.new as any;
+            const status = call?.status as string | undefined;
+            if (!status) return;
+
+            if (status === "active") {
+              activateCall();
+            }
+            if (["ended", "missed", "rejected"].includes(status)) {
+              endCallLocalOnly();
+            }
+          }
+        )
+        .subscribe();
+
+      callRowChannelRef.current = ch;
+    },
+    [activateCall, endCallLocalOnly]
+  );
+
   // Start a 1:1 call
   const startCall = useCallback(
     async (roomId: string, targetUserId: string, type: CallType) => {
