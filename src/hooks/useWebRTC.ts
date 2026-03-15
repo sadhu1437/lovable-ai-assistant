@@ -31,6 +31,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>("unknown");
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [remoteStream, setRemoteStream] = useState<MediaStream>(new MediaStream());
 
   // For 1:1 calls
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -73,7 +74,9 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
       callRowChannelRef.current = null;
     }
 
-    remoteStreamRef.current = new MediaStream();
+    const newStream = new MediaStream();
+    remoteStreamRef.current = newStream;
+    setRemoteStream(newStream);
     setCallDuration(0);
     setIsMuted(false);
     setIsVideoOff(false);
@@ -207,8 +210,12 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
             remoteStreamRef.current.addTrack(track);
           }
         });
+        // Force re-render so audio/video element picks up the stream
+        setRemoteStream(remoteStreamRef.current);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          // Ensure autoplay works
+          remoteVideoRef.current.play().catch(() => {});
         }
         // If media is flowing, we can safely start the timer
         activateCall();
@@ -308,8 +315,10 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
             remoteStreamRef.current.addTrack(track);
           }
         });
+        setRemoteStream(remoteStreamRef.current);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          remoteVideoRef.current.play().catch(() => {});
         }
       };
 
@@ -852,7 +861,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     connectionQuality,
     localVideoRef,
     remoteVideoRef,
-    remoteStream: remoteStreamRef.current,
+    remoteStream,
     startCall,
     startGroupCall,
     joinGroupCall,

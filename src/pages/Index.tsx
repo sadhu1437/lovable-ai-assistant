@@ -110,7 +110,7 @@ const Index = () => {
         }
       });
     }
-  }, [activeId, user]);
+  }, [activeId, user, conversations]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

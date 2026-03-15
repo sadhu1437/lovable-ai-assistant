@@ -165,8 +165,9 @@ export function CallScreen({
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
     }
-  }, [remoteStream, remoteVideoRef]);
+  }, [remoteStream, remoteVideoRef, isPiP, callType]);
 
   const statusLabel = callStatus === "calling" ? "Calling..." : callStatus === "ringing" ? "Ringing..." : callStatus === "active" ? formatDuration(callDuration) : "Call ended";
 
