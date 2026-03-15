@@ -315,8 +315,10 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
             remoteStreamRef.current.addTrack(track);
           }
         });
+        setRemoteStream(remoteStreamRef.current);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          remoteVideoRef.current.play().catch(() => {});
         }
       };
 
