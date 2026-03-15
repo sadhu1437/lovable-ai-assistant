@@ -30,7 +30,14 @@ const Index = () => {
   const { user, signOut } = useAuth();
   const tts = useElevenLabsTTS();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveIdState] = useState<string | null>(() => {
+    return sessionStorage.getItem("nexus-active-conv") || null;
+  });
+  const setActiveId = useCallback((id: string | null) => {
+    setActiveIdState(id);
+    if (id) sessionStorage.setItem("nexus-active-conv", id);
+    else sessionStorage.removeItem("nexus-active-conv");
+  }, []);
   const [isLoading, setIsLoading] = useState(false);
   const [category, setCategory] = useState("general");
   const [model, setModel] = useState(() =>
