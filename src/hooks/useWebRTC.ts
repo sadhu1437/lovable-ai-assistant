@@ -74,7 +74,9 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
       callRowChannelRef.current = null;
     }
 
-    remoteStreamRef.current = new MediaStream();
+    const newStream = new MediaStream();
+    remoteStreamRef.current = newStream;
+    setRemoteStream(newStream);
     setCallDuration(0);
     setIsMuted(false);
     setIsVideoOff(false);
