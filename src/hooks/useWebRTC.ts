@@ -210,8 +210,12 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
             remoteStreamRef.current.addTrack(track);
           }
         });
+        // Force re-render so audio/video element picks up the stream
+        setRemoteStream(remoteStreamRef.current);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          // Ensure autoplay works
+          remoteVideoRef.current.play().catch(() => {});
         }
         // If media is flowing, we can safely start the timer
         activateCall();
