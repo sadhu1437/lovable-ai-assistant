@@ -861,7 +861,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
     connectionQuality,
     localVideoRef,
     remoteVideoRef,
-    remoteStream: remoteStreamRef.current,
+    remoteStream,
     startCall,
     startGroupCall,
     joinGroupCall,
