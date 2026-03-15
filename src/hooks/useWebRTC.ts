@@ -31,6 +31,7 @@ export function useWebRTC({ currentUserId, onCallEnded }: UseWebRTCOptions) {
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>("unknown");
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [remoteStream, setRemoteStream] = useState<MediaStream>(new MediaStream());
 
   // For 1:1 calls
   const pcRef = useRef<RTCPeerConnection | null>(null);
