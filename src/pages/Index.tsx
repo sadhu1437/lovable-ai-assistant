@@ -357,7 +357,7 @@ const Index = () => {
               ...c,
               messages: [
                 ...c.messages,
-                { id: localAssistantId, role: "assistant" as const, content: delta, timestamp: new Date() },
+                { id: localAssistantId, role: "assistant" as const, content: delta, timestamp: new Date(), webSearchUsed: searchContext && searchContext.length > 0 },
               ],
             };
           })
