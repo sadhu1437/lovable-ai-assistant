@@ -349,7 +349,7 @@ const Index = () => {
               return {
                 ...c,
                 messages: c.messages.map((m) =>
-                  m.id === localAssistantId ? { ...m, content: m.content + delta } : m
+                  m.id === localAssistantId ? { ...m, content: m.content + delta, webSearchUsed: searchContext && searchContext.length > 0 } : m
                 ),
               };
             }
@@ -357,7 +357,7 @@ const Index = () => {
               ...c,
               messages: [
                 ...c.messages,
-                { id: localAssistantId, role: "assistant" as const, content: delta, timestamp: new Date() },
+                { id: localAssistantId, role: "assistant" as const, content: delta, timestamp: new Date(), webSearchUsed: searchContext && searchContext.length > 0 },
               ],
             };
           })

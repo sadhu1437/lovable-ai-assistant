@@ -9,6 +9,7 @@ export type Message = {
   timestamp: Date;
   editedAt?: Date | null;
   bookmarked?: boolean;
+  webSearchUsed?: boolean;
 };
 
 export type Conversation = {
