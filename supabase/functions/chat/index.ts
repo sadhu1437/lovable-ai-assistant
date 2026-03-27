@@ -26,6 +26,14 @@ IMPORTANT: You are multilingual. If the user writes in any language, respond flu
 
     const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
     const dateNote = `\nToday's date is ${today}. Use this when the user asks about the current date, day, or time-related questions.`;
+    
+    let searchNote = "";
+    if (searchContext && Array.isArray(searchContext) && searchContext.length > 0) {
+      const searchResults = searchContext.map((r: any, i: number) => 
+        `[${i + 1}] ${r.title}\n${r.snippet}\nSource: ${r.url}`
+      ).join("\n\n");
+      searchNote = `\n\nWEB SEARCH RESULTS (use these to provide accurate, up-to-date information. Cite sources when relevant):\n${searchResults}\n\nBased on these search results, provide a comprehensive and accurate answer. Always mention your sources.`;
+    }
     const systemContent = (systemPrompts[category] || systemPrompts.general) + dateNote;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
