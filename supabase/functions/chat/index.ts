@@ -34,7 +34,7 @@ IMPORTANT: You are multilingual. If the user writes in any language, respond flu
       ).join("\n\n");
       searchNote = `\n\nWEB SEARCH RESULTS (use these to provide accurate, up-to-date information. Cite sources when relevant):\n${searchResults}\n\nBased on these search results, provide a comprehensive and accurate answer. Always mention your sources.`;
     }
-    const systemContent = (systemPrompts[category] || systemPrompts.general) + dateNote;
+    const systemContent = (systemPrompts[category] || systemPrompts.general) + dateNote + searchNote;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
