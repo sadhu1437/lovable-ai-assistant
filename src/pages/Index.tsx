@@ -6,7 +6,7 @@ import { TypingIndicator } from "@/components/TypingIndicator";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ImageGallery } from "@/components/ImageGallery";
 import { CommandPalette } from "@/components/CommandPalette";
-import { streamChat, generateId, isImageRequest, isVideoRequest, isCodeRequest, generateImage, generateVideo, analyzeFile, streamCodeGenerate } from "@/lib/chat";
+import { streamChat, generateId, isImageRequest, isVideoRequest, isCodeRequest, isSearchRequest, webSearch, generateImage, generateVideo, analyzeFile, streamCodeGenerate } from "@/lib/chat";
 import { extractFileForAnalysis } from "@/lib/fileExtraction";
 import type { Message, Conversation } from "@/lib/chat";
 import { Menu, X, Download } from "lucide-react";
