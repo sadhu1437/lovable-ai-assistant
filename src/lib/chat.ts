@@ -99,6 +99,7 @@ export async function streamChat({
   messages,
   category,
   model,
+  searchContext,
   onDelta,
   onDone,
   onError,
@@ -106,18 +107,24 @@ export async function streamChat({
   messages: { role: string; content: string }[];
   category: string;
   model?: string;
+  searchContext?: SearchResult[];
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
 }) {
   try {
+    const body: any = { messages, category, model };
+    if (searchContext && searchContext.length > 0) {
+      body.searchContext = searchContext;
+    }
+
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages, category, model }),
+      body: JSON.stringify(body),
     });
 
     if (!resp.ok) {
