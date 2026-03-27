@@ -322,10 +322,24 @@ const Index = () => {
       { role: "user" as const, content },
     ];
 
+    // Perform web search if query seems to need current information
+    let searchContext: { title: string; snippet: string; url: string }[] | undefined;
+    if (isSearchRequest(content)) {
+      try {
+        searchContext = await webSearch(content);
+        if (searchContext.length > 0) {
+          toast.info("🔍 Searching the web...", { duration: 2000 });
+        }
+      } catch {
+        // Continue without search results
+      }
+    }
+
     await streamChat({
       messages: allMessages,
       category,
       model,
+      searchContext,
       onDelta: (delta) => {
         setConversations((prev) =>
           prev.map((c) => {
