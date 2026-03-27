@@ -24,7 +24,9 @@ IMPORTANT: You are multilingual. If the user writes in any language, respond flu
       general: "You are NexusAI, a highly capable AI assistant with no limits on topics. Provide thorough, accurate, and helpful responses. Use markdown formatting for readability. Be direct and efficient." + multilingualNote,
     };
 
-    const systemContent = systemPrompts[category] || systemPrompts.general;
+    const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const dateNote = `\nToday's date is ${today}. Use this when the user asks about the current date, day, or time-related questions.`;
+    const systemContent = (systemPrompts[category] || systemPrompts.general) + dateNote;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
