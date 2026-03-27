@@ -55,6 +55,44 @@ export const aiModels: AIModel[] = [
   { id: "openai/gpt-5.2", label: "GPT-5.2", provider: "OpenAI", icon: "◉", description: "Latest enhanced reasoning" },
 ];
 
+const WEB_SEARCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-search`;
+
+const SEARCH_TRIGGERS = [
+  /(?:what|who|when|where|how|why)\s+(?:is|are|was|were|did|does|do|will|has|have|had)\s+/i,
+  /(?:latest|recent|current|today|yesterday|this\s+(?:week|month|year)|20[2-9]\d)\b/i,
+  /(?:news|update|score|result|price|weather|stock|market)\b/i,
+  /(?:search|look\s+up|find\s+(?:out|me)|google|tell\s+me\s+about)\s+/i,
+  /(?:trending|popular|viral|breaking)\b/i,
+  /(?:release|launched|announced|happened|died|born|elected|won|lost)\b/i,
+  /(?:ipl|cricket|football|nba|fifa|olympics|world\s+cup)\b/i,
+  /(?:movie|film|series|show|album|song)\s+(?:release|review|rating|cast)/i,
+];
+
+export function isSearchRequest(text: string): boolean {
+  if (isImageRequest(text) || isVideoRequest(text) || isCodeRequest(text)) return false;
+  return SEARCH_TRIGGERS.some((re) => re.test(text));
+}
+
+export type SearchResult = { title: string; snippet: string; url: string };
+
+export async function webSearch(query: string): Promise<SearchResult[]> {
+  try {
+    const resp = await fetch(WEB_SEARCH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ query }),
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return data.results || [];
+  } catch {
+    return [];
+  }
+}
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export async function streamChat({
