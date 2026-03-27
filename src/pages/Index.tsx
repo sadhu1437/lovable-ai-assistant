@@ -349,7 +349,7 @@ const Index = () => {
               return {
                 ...c,
                 messages: c.messages.map((m) =>
-                  m.id === localAssistantId ? { ...m, content: m.content + delta } : m
+                  m.id === localAssistantId ? { ...m, content: m.content + delta, webSearchUsed: searchContext && searchContext.length > 0 } : m
                 ),
               };
             }
