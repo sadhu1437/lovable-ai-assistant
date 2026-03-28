@@ -30,9 +30,9 @@ IMPORTANT: You are multilingual. If the user writes in any language, respond flu
     let searchNote = "";
     if (searchContext && Array.isArray(searchContext) && searchContext.length > 0) {
       const searchResults = searchContext.map((r: any, i: number) => 
-        `[${i + 1}] ${r.title}\n${r.snippet}\nSource: ${r.url}`
+        `[${i + 1}] ${r.title}\nSnippet: ${r.snippet}\nURL: ${r.url}`
       ).join("\n\n");
-      searchNote = `\n\nWEB SEARCH RESULTS (use these to provide accurate, up-to-date information. Cite sources when relevant):\n${searchResults}\n\nBased on these search results, provide a comprehensive and accurate answer. Always mention your sources.`;
+      searchNote = `\n\nWEB SEARCH RESULTS (use these to provide accurate, up-to-date information):\n${searchResults}\n\nIMPORTANT: When citing sources, use markdown links like [Source Name](URL). For example: [Reuters](https://reuters.com). Always include clickable source links in your response so the user can verify information. At the end of your response, include a "Sources" section with all referenced links.`;
     }
     const systemContent = (systemPrompts[category] || systemPrompts.general) + dateNote + searchNote;
 

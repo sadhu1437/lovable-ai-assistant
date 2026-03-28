@@ -258,6 +258,18 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                         </tr>
                       );
                     },
+                    a({ href, children }) {
+                      return (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-primary/80 underline underline-offset-2 decoration-primary/40 hover:decoration-primary/80 transition-colors"
+                        >
+                          {children}
+                        </a>
+                      );
+                    },
                   }}
                 >
                   {message.content}
