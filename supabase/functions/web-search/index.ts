@@ -19,11 +19,21 @@ function decodeHtml(text: string): string {
     .replace(/<[^>]*>/g, "");
 }
 
+function extractKeywords(query: string): string {
+  const stopWords = new Set(["what","is","are","was","were","the","a","an","of","in","on","for","to","and","or","how","much","does","do","did","will","has","have","had","about","me","tell","latest","current","today","please","can","you","find","search","look","up","give","show"]);
+  return query
+    .replace(/[?!.,;:'"]/g, "")
+    .split(/\s+/)
+    .filter((w) => w.length > 1 && !stopWords.has(w.toLowerCase()))
+    .slice(0, 5)
+    .join(" ");
+}
+
 async function searchGoogleNewsRSS(query: string): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
-  // Try topic-specific Google News RSS first, then general
-  const encodedQuery = encodeURIComponent(query);
+  const keywords = extractKeywords(query) || query;
+  const encodedQuery = encodeURIComponent(keywords);
   const urls = [
     `https://news.google.com/rss/search?q=${encodedQuery}&hl=en&gl=US&ceid=US:en`,
     `https://news.google.com/rss/search?q=${encodedQuery}&hl=en-IN&gl=IN&ceid=IN:en`,
@@ -43,24 +53,24 @@ async function searchGoogleNewsRSS(query: string): Promise<SearchResult[]> {
         if (results.length >= 8) break;
 
         const titleMatch = item.match(/<title>([\s\S]*?)<\/title>/);
-        const linkMatch = item.match(/<link\/>\s*(https?:\/\/[^\s<]+)/);
+        const linkMatch = item.match(/<link\s*\/?>\s*(https?:\/\/[^\s<]+)/) || item.match(/<link>([\s\S]*?)<\/link>/);
         const pubDateMatch = item.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-        const sourceMatch = item.match(/<source[^>]*>([\s\S]*?)<\/source>/);
+        const sourceMatch = item.match(/<source[^>]*url="([^"]*)"[^>]*>([\s\S]*?)<\/source>/);
         const descMatch = item.match(/<description>([\s\S]*?)<\/description>/);
 
         const title = titleMatch ? decodeHtml(titleMatch[1]).trim() : "";
         const link = linkMatch ? linkMatch[1].trim() : "";
         const pubDate = pubDateMatch ? pubDateMatch[1].trim() : "";
-        const source = sourceMatch ? decodeHtml(sourceMatch[1]).trim() : "";
+        const source = sourceMatch ? decodeHtml(sourceMatch[2]).trim() : "";
+        const sourceUrl = sourceMatch ? sourceMatch[1].trim() : "";
         const desc = descMatch ? decodeHtml(descMatch[1]).trim() : "";
 
         if (title) {
-          // Avoid duplicates
           if (results.some((r) => r.title === title)) continue;
           results.push({
             title,
             snippet: desc || title,
-            url: link || `https://news.google.com/search?q=${encodedQuery}`,
+            url: sourceUrl || link || `https://news.google.com/search?q=${encodedQuery}`,
             source,
             date: pubDate,
           });
