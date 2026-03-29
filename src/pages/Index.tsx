@@ -60,6 +60,7 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
     setLoadingConvs(true);
+    loadedConvsRef.current.clear();
     loadConversations(user.id)
       .then(setConversations)
       .catch(() => toast.error("Failed to load conversations"))
