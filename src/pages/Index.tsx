@@ -100,8 +100,6 @@ const Index = () => {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Track which conversations have been loaded to avoid re-fetching
-  const loadedConvsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!activeId || !user) return;
