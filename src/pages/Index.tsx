@@ -53,6 +53,7 @@ const Index = () => {
   const chatInputRef = useRef<ChatInputHandle>(null);
   const conversationsRef = useRef(conversations);
   conversationsRef.current = conversations;
+  const loadedConvsRef = useRef<Set<string>>(new Set());
 
   const activeConv = conversations.find((c) => c.id === activeId) || null;
 
