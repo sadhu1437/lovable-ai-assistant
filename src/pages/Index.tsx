@@ -341,12 +341,15 @@ const Index = () => {
       }
     }
 
+    let chatAccumulator = "";
+
     await streamChat({
       messages: allMessages,
       category,
       model,
       searchContext,
       onDelta: (delta) => {
+        chatAccumulator += delta;
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== convId) return c;
@@ -355,7 +358,7 @@ const Index = () => {
               return {
                 ...c,
                 messages: c.messages.map((m) =>
-                  m.id === localAssistantId ? { ...m, content: m.content + delta, webSearchUsed: searchContext && searchContext.length > 0 } : m
+                  m.id === localAssistantId ? { ...m, content: chatAccumulator, webSearchUsed: searchContext && searchContext.length > 0 } : m
                 ),
               };
             }
@@ -371,26 +374,22 @@ const Index = () => {
       },
       onDone: async () => {
         setIsLoading(false);
-        if (user) {
-          const finalConv = conversationsRef.current.find((c) => c.id === convId);
-          const assistantMsg = finalConv?.messages.find((m) => m.id === localAssistantId);
-          if (assistantMsg) {
-            try {
-              const dbId = await saveMessage(convId!, "assistant", assistantMsg.content);
-              setConversations((prev) =>
-                prev.map((c) =>
-                  c.id === convId
-                    ? {
-                        ...c,
-                        messages: c.messages.map((m) =>
-                          m.id === localAssistantId ? { ...m, id: dbId } : m
-                        ),
-                      }
-                    : c
-                )
-              );
-            } catch { /* non-critical */ }
-          }
+        if (user && chatAccumulator) {
+          try {
+            const dbId = await saveMessage(convId!, "assistant", chatAccumulator);
+            setConversations((prev) =>
+              prev.map((c) =>
+                c.id === convId
+                  ? {
+                      ...c,
+                      messages: c.messages.map((m) =>
+                        m.id === localAssistantId ? { ...m, id: dbId } : m
+                      ),
+                    }
+                  : c
+              )
+            );
+          } catch { /* non-critical */ }
         }
       },
       onError: (err) => {
