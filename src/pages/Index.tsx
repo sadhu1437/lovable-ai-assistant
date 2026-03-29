@@ -98,10 +98,16 @@ const Index = () => {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  // Track which conversations have been loaded to avoid re-fetching
+  const loadedConvsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (!activeId || !user) return;
+    if (loadedConvsRef.current.has(activeId)) return;
+
     const conv = conversations.find((c) => c.id === activeId);
     if (conv && conv.messages.length === 0) {
+      loadedConvsRef.current.add(activeId);
       loadMessages(activeId).then((msgs) => {
         if (msgs.length > 0) {
           setConversations((prev) =>
@@ -110,7 +116,7 @@ const Index = () => {
         }
       });
     }
-  }, [activeId, user, conversations]);
+  }, [activeId, user]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
