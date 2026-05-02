@@ -37,9 +37,10 @@ IMPORTANT: You are multilingual. If the user writes in any language, respond flu
     }
     const systemContent = (systemPrompts[category] || systemPrompts.general) + dateNote + searchNote;
 
-    // For Guidewire QA, default to a high-context, strong-reasoning model unless the user picked one
+    // For Guidewire QA, default to Gemini 2.5 Flash: large context (1M tokens) + fast streaming,
+    // so long conversations stay responsive while preserving full chat history.
     const effectiveModel =
-      model || (category === "guidewire" ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview");
+      model || (category === "guidewire" ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
