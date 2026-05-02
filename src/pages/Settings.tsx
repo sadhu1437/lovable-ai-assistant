@@ -464,7 +464,7 @@ export default function Settings() {
           </Button>
           <div>
             <h1 className="text-xl font-semibold text-foreground font-mono">Settings</h1>
-            <p className="text-xs text-muted-foreground">Customize your NexusAI experience</p>
+            <p className="text-xs text-muted-foreground">Customize your SmartAI experience</p>
           </div>
         </div>
 

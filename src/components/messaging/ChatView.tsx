@@ -761,7 +761,7 @@ export function ChatView({ room, messages, currentUserId, profiles, onBack, onli
             </div>
           );
         })}
-        {botThinking && <TypingBubble names={["NexusAI Bot"]} avatars={[null]} />}
+        {botThinking && <TypingBubble names={["SmartAI Bot"]} avatars={[null]} />}
         <TypingBubble names={typingNames} avatars={typingAvatars} />
       </div>
 

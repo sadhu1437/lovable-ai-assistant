@@ -276,7 +276,7 @@ export default function Messages() {
           onChatWithBot={async () => {
             if (botLoading) return;
             setBotLoading(true);
-            toast.info("Starting chat with NexusAI Bot...");
+            toast.info("Starting chat with SmartAI Bot...");
             const roomId = await createBotDM(user.id);
             if (roomId) {
               await loadRooms();
