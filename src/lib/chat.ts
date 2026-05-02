@@ -42,6 +42,7 @@ export const categories: Category[] = [
   { id: "dsa", label: "DSA / FAANG", icon: "🧠", description: "Data structures & algorithms" },
   { id: "social", label: "Social Media", icon: "📱", description: "Content & growth strategy" },
   { id: "education", label: "Education", icon: "📚", description: "Learn anything" },
+  { id: "guidewire", label: "Guidewire QA", icon: "🛡️", description: "Guidewire testing, Gosu & automation" },
 ];
 
 export const aiModels: AIModel[] = [
