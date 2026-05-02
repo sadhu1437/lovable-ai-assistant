@@ -1,6 +1,6 @@
 {
-  "name": "NexusAI - Ultra-fast AI Assistant",
-  "short_name": "NexusAI",
+  "name": "SmartAI - Ultra-fast AI Assistant",
+  "short_name": "SmartAI",
   "description": "Ultra-fast AI assistant for coding, DSA, content creation & more",
   "start_url": "/",
   "display": "standalone",

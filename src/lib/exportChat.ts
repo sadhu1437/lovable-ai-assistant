@@ -9,7 +9,7 @@ export function exportAsMarkdown(conv: Conversation): void {
   md += `_Exported on ${new Date().toLocaleString()}_\n\n---\n\n`;
 
   for (const msg of conv.messages) {
-    const role = msg.role === "user" ? "**You**" : "**NexusAI**";
+    const role = msg.role === "user" ? "**You**" : "**SmartAI**";
     md += `### ${role} — ${formatTimestamp(msg.timestamp)}\n\n`;
     md += `${msg.content}\n\n---\n\n`;
   }
@@ -40,7 +40,7 @@ export function exportAsPdf(conv: Conversation): void {
 
   for (const msg of conv.messages) {
     const roleClass = msg.role === "user" ? "user" : "assistant";
-    const roleName = msg.role === "user" ? "You" : "NexusAI";
+    const roleName = msg.role === "user" ? "You" : "SmartAI";
     body += `<div class="message">`;
     body += `<div class="role ${roleClass}">${roleName}<span class="timestamp">${formatTimestamp(msg.timestamp)}</span></div>`;
     body += `<div class="content">${escapeHtml(msg.content)}</div>`;

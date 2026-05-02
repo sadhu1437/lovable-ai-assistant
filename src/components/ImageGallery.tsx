@@ -56,7 +56,7 @@ export function ImageGallery({ conversations, onBack }: ImageGalleryProps) {
             </div>
             <h2 className="text-lg font-semibold text-foreground font-mono mb-2">No images yet</h2>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Generate images by asking NexusAI to "create an image", "draw", or "imagine" something.
+              Generate images by asking SmartAI to "create an image", "draw", or "imagine" something.
             </p>
           </div>
         ) : (

@@ -217,7 +217,7 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
         });
         botUserId = data?.bot_user_id;
       }
-      if (!botUserId) { toast.error("Could not find NexusAI Bot"); setAddingBot(false); return; }
+      if (!botUserId) { toast.error("Could not find SmartAI Bot"); setAddingBot(false); return; }
       await addMember(botUserId);
     } catch {
       toast.error("Failed to add bot");
@@ -289,7 +289,7 @@ export function GroupInfoPanel({ room, currentUserId, onlineUsers, onStartDM }: 
                         <Bot className="w-3.5 h-3.5 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground font-mono">NexusAI Bot</p>
+                        <p className="text-xs font-semibold text-foreground font-mono">SmartAI Bot</p>
                         <p className="text-[10px] text-muted-foreground font-mono">AI Assistant</p>
                       </div>
                       {addingBot ? (

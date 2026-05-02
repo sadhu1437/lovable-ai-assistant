@@ -34,7 +34,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
             <span className="text-sm font-bold font-mono">N</span>
           </div>
           <div className="flex-1">
-            <h1 className="text-sm font-semibold text-foreground font-mono">NexusAI</h1>
+            <h1 className="text-sm font-semibold text-foreground font-mono">SmartAI</h1>
             <p className="text-[10px] text-muted-foreground">Ultra-fast AI</p>
           </div>
           {user && (

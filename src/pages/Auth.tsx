@@ -83,7 +83,7 @@ export default function AuthPage() {
             <Zap className="w-7 h-7" />
           </div>
           <h1 className="text-2xl font-bold text-foreground font-mono">
-            Nexus<span className="text-primary text-glow">AI</span>
+            Smart<span className="text-primary text-glow">AI</span>
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {isLogin ? "Sign in to save your conversations" : "Create your account"}

@@ -102,7 +102,7 @@ export function RoomList({ rooms, activeRoomId, onSelectRoom, onNewDM, onNewGrou
             onClick={onChatWithBot}
             className="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-xs text-primary transition-all font-mono font-medium"
           >
-            <Bot className="w-3.5 h-3.5" /> Chat with NexusAI
+            <Bot className="w-3.5 h-3.5" /> Chat with SmartAI
           </button>
           <div className="flex gap-1.5">
             <button

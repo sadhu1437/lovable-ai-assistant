@@ -303,7 +303,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={canvasMode ? "Describe the website or app to build..." : selectedFile ? "Add a note about this file (optional)..." : isListening ? "Listening..." : "Ask NexusAI anything..."}
+            placeholder={canvasMode ? "Describe the website or app to build..." : selectedFile ? "Add a note about this file (optional)..." : isListening ? "Listening..." : "Ask SmartAI anything..."}
             rows={1}
             className="flex-1 bg-transparent resize-none text-foreground placeholder:text-muted-foreground outline-none px-2 py-1.5 text-sm max-h-[200px]"
           />
@@ -335,7 +335,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
           </button>
         </div>
         <p className="text-[10px] text-muted-foreground text-center mt-2 font-mono">
-          NexusAI • {selectedModel.label} ({selectedModel.provider}) • Fast & unlimited
+          SmartAI • {selectedModel.label} ({selectedModel.provider}) • Fast & unlimited
         </p>
       </div>
     </div>

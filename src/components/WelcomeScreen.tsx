@@ -22,7 +22,7 @@ export function WelcomeScreen({ onPrompt }: WelcomeScreenProps) {
         </div>
 
         <h1 className="text-3xl font-bold text-foreground mb-2 font-mono">
-          Nexus<span className="text-primary text-glow">AI</span>
+          Smart<span className="text-primary text-glow">AI</span>
         </h1>
         <p className="text-muted-foreground text-sm mb-8">
           Ultra-fast AI assistant for coding, DSA, content creation & more

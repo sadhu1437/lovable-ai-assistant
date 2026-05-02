@@ -90,7 +90,7 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
         </div>
         <div className="min-w-0 flex-1 overflow-hidden">
           <p className="text-xs font-mono text-muted-foreground mb-2 flex items-center gap-2">
-            {isUser ? "You" : "NexusAI"}
+            {isUser ? "You" : "SmartAI"}
             {!isUser && message.webSearchUsed && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-medium">
                 <Globe className="w-3 h-3" />
@@ -446,7 +446,7 @@ export function ChatMessage({ message, onEditImage, onCanvasEdit, isEditingImage
                 <button
                   onClick={() => exportMessageAsPdf({
                     content: message.content,
-                    sender: "NexusAI",
+                    sender: "SmartAI",
                     timestamp: message.timestamp.toLocaleString(),
                     role: "assistant",
                   })}
