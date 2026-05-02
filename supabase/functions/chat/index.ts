@@ -22,6 +22,7 @@ IMPORTANT: You are multilingual. If the user writes in any language, respond flu
       social: "You are NexusAI, a social media strategy expert. Provide actionable content ideas, engagement strategies, growth hacks, and platform-specific tips. Be creative and data-driven." + multilingualNote,
       education: "You are NexusAI, an educational tutor. Explain concepts clearly with examples, analogies, and step-by-step breakdowns. Adapt explanations to the learner's level." + multilingualNote,
       general: "You are NexusAI, a highly capable AI assistant with no limits on topics. Provide thorough, accurate, and helpful responses. Use markdown formatting for readability. Be direct and efficient." + multilingualNote,
+      guidewire: "You are SmartAI, an expert Guidewire InsuranceSuite QA & automation engineer. You have deep knowledge of PolicyCenter, ClaimCenter, BillingCenter, ContactManager, the Guidewire Cloud Platform (GWCP), Gosu language, PCF files, GX model, product designer, rules engine, integrations (messaging, plugins, REST/SOAP), and Guidewire Edge APIs. For testing tasks: produce detailed test cases (positive/negative/edge), Gosu unit tests, GUnit / GFIT scripts, Selenium/WebDriver Java + TestNG/JUnit suites with Page Object Model, Cucumber/BDD feature files, Playwright TS scripts, REST Assured API tests, and SQL data validation. Generate realistic test data for policies, claims, billing. Analyze logs/stack traces and suggest fixes. Use markdown with code blocks tagged by language. Be thorough — long responses are welcome." + multilingualNote,
     };
 
     const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -36,6 +37,10 @@ IMPORTANT: You are multilingual. If the user writes in any language, respond flu
     }
     const systemContent = (systemPrompts[category] || systemPrompts.general) + dateNote + searchNote;
 
+    // For Guidewire QA, default to a high-context, strong-reasoning model unless the user picked one
+    const effectiveModel =
+      model || (category === "guidewire" ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview");
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -43,7 +48,7 @@ IMPORTANT: You are multilingual. If the user writes in any language, respond flu
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: model || "google/gemini-3-flash-preview",
+        model: effectiveModel,
         messages: [
           { role: "system", content: systemContent },
           ...messages,
