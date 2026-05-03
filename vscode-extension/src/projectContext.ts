@@ -125,3 +125,67 @@ export function formatContextAsSystemMessage(ctx: ProjectContext | null): string
   }
   return parts.join("\n");
 }
+
+export interface EditorContext {
+  file?: { path: string; language: string; content: string };
+  selection?: { path: string; language: string; text: string; startLine: number; endLine: number };
+  cursor?: { path: string; language: string; line: number; character: number; before: string; after: string };
+}
+
+export function getEditorContext(opts: { includeFile: boolean; includeSelection: boolean; includeCursor: boolean }): EditorContext {
+  const ed = vscode.window.activeTextEditor;
+  const out: EditorContext = {};
+  if (!ed) return out;
+  const doc = ed.document;
+  const rel = vscode.workspace.asRelativePath(doc.uri);
+  const lang = doc.languageId;
+
+  if (opts.includeFile) {
+    const text = doc.getText();
+    out.file = {
+      path: rel,
+      language: lang,
+      content: text.length > 20000 ? text.slice(0, 20000) + "\n/* ...truncated... */" : text,
+    };
+  }
+  if (opts.includeSelection && !ed.selection.isEmpty) {
+    const text = doc.getText(ed.selection);
+    out.selection = {
+      path: rel,
+      language: lang,
+      text,
+      startLine: ed.selection.start.line + 1,
+      endLine: ed.selection.end.line + 1,
+    };
+  }
+  if (opts.includeCursor) {
+    const pos = ed.selection.active;
+    const startLine = Math.max(0, pos.line - 10);
+    const endLine = Math.min(doc.lineCount - 1, pos.line + 10);
+    const before = doc.getText(new vscode.Range(startLine, 0, pos.line, pos.character));
+    const after = doc.getText(new vscode.Range(pos.line, pos.character, endLine, doc.lineAt(endLine).text.length));
+    out.cursor = {
+      path: rel,
+      language: lang,
+      line: pos.line + 1,
+      character: pos.character + 1,
+      before,
+      after,
+    };
+  }
+  return out;
+}
+
+export function formatEditorContext(ec: EditorContext): string {
+  const parts: string[] = [];
+  if (ec.file) {
+    parts.push(`# Current File: ${ec.file.path} (${ec.file.language})\n\`\`\`${ec.file.language}\n${ec.file.content}\n\`\`\``);
+  }
+  if (ec.selection) {
+    parts.push(`# Selected Text — ${ec.selection.path} L${ec.selection.startLine}-${ec.selection.endLine}\n\`\`\`${ec.selection.language}\n${ec.selection.text}\n\`\`\``);
+  }
+  if (ec.cursor) {
+    parts.push(`# Cursor Context — ${ec.cursor.path} (line ${ec.cursor.line}, col ${ec.cursor.character})\nCode before cursor:\n\`\`\`${ec.cursor.language}\n${ec.cursor.before}\n\`\`\`\nCode after cursor:\n\`\`\`${ec.cursor.language}\n${ec.cursor.after}\n\`\`\``);
+  }
+  return parts.join("\n\n");
+}
