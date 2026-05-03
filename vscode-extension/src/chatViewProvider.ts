@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { streamChat, ChatMessage } from "./api";
-import { gatherProjectContext, formatContextAsSystemMessage } from "./projectContext";
+import { gatherProjectContext, formatContextAsSystemMessage, getEditorContext, formatEditorContext } from "./projectContext";
 
 export class SmartAIChatViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "smartai.chatView";
@@ -18,7 +18,12 @@ export class SmartAIChatViewProvider implements vscode.WebviewViewProvider {
     view.webview.onDidReceiveMessage(async (msg) => {
       switch (msg.type) {
         case "send":
-          await this.handleUserMessage(msg.text, msg.category);
+          await this.handleUserMessage(msg.text, msg.category, {
+            includeFile: !!msg.includeFile,
+            includeSelection: !!msg.includeSelection,
+            includeCursor: !!msg.includeCursor,
+            longChat: !!msg.longChat,
+          });
           break;
         case "stop":
           this.currentAbort?.abort();
@@ -42,7 +47,7 @@ export class SmartAIChatViewProvider implements vscode.WebviewViewProvider {
     }
     this.view?.show?.(true);
     this.view?.webview.postMessage({ type: "userMessage", text: prompt });
-    await this.handleUserMessage(prompt, category);
+    await this.handleUserMessage(prompt, category, { includeFile: false, includeSelection: false, includeCursor: false, longChat: false });
   }
 
   private async insertIntoEditor(code: string) {
@@ -55,7 +60,16 @@ export class SmartAIChatViewProvider implements vscode.WebviewViewProvider {
     await editor.edit((eb) => eb.replace(editor.selection, code));
   }
 
-  private async handleUserMessage(text: string, category = "general") {
+  private async handleUserMessage(
+    text: string,
+    category = "general",
+    ctxOpts: { includeFile: boolean; includeSelection: boolean; includeCursor: boolean; longChat: boolean } = {
+      includeFile: false,
+      includeSelection: false,
+      includeCursor: false,
+      longChat: false,
+    }
+  ) {
     if (!this.view) return;
     const cfg = vscode.workspace.getConfiguration("smartai");
     const includeCtx = cfg.get<boolean>("includeProjectContext", true);
@@ -75,14 +89,27 @@ export class SmartAIChatViewProvider implements vscode.WebviewViewProvider {
       }
     }
 
-    this.history.push({ role: "user", content: text });
+    // Editor context (current file / selection / cursor)
+    let userContent = text;
+    if (ctxOpts.includeFile || ctxOpts.includeSelection || ctxOpts.includeCursor) {
+      const ec = getEditorContext(ctxOpts);
+      const ecText = formatEditorContext(ec);
+      if (ecText) {
+        userContent = `${text}\n\n---\n${ecText}`;
+      }
+    }
+
+    this.history.push({ role: "user", content: userContent });
     this.view.webview.postMessage({ type: "assistantStart" });
 
     this.currentAbort = new AbortController();
     let assistantBuf = "";
+    // Long-chat mode → high-context Gemini 2.5 Flash (1M tokens)
+    const model = ctxOpts.longChat ? "google/gemini-2.5-flash" : undefined;
     await streamChat({
       messages: [...systemMessages, ...this.history],
       category,
+      model,
       signal: this.currentAbort.signal,
       onDelta: (d) => {
         assistantBuf += d;
@@ -139,6 +166,12 @@ export class SmartAIChatViewProvider implements vscode.WebviewViewProvider {
     <button id="stop">Stop</button>
   </div>
   <div id="messages"><div class="empty">Ask SmartAI anything about your code.</div></div>
+  <div id="ctxBar" style="display:flex;flex-wrap:wrap;gap:10px;padding:6px 8px;border-top:1px solid var(--vscode-panel-border);font-size:11px;color:var(--vscode-descriptionForeground);">
+    <label title="Send the entire active file"><input type="checkbox" id="incFile"/> 📄 File</label>
+    <label title="Send currently selected text"><input type="checkbox" id="incSel" checked/> ✂️ Selection</label>
+    <label title="Send code around the cursor"><input type="checkbox" id="incCur"/> 📍 Cursor</label>
+    <label title="Use high-context model (Gemini 2.5 Flash, 1M tokens) for long chats"><input type="checkbox" id="longChat"/> 🧠 Long chat</label>
+  </div>
   <div id="inputBar">
     <textarea id="input" placeholder="Ask about this project... (Ctrl+Enter to send)"></textarea>
     <button id="send">Send</button>
@@ -215,7 +248,15 @@ function send() {
   if (!text) return;
   appendMessage('user', text);
   input.value = '';
-  vscode.postMessage({ type: 'send', text, category: categoryEl.value });
+  vscode.postMessage({
+    type: 'send',
+    text,
+    category: categoryEl.value,
+    includeFile: document.getElementById('incFile').checked,
+    includeSelection: document.getElementById('incSel').checked,
+    includeCursor: document.getElementById('incCur').checked,
+    longChat: document.getElementById('longChat').checked,
+  });
 }
 
 window.addEventListener('message', (event) => {
