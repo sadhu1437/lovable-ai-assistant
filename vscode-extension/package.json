@@ -1,0 +1,99 @@
+{
+  "name": "smartai-assistant",
+  "displayName": "SmartAI Assistant",
+  "description": "Full IDE AI assistant — chat, code explain, generate tests, fix bugs, Guidewire QA helper. Powered by SmartAI.",
+  "version": "0.1.0",
+  "publisher": "smartai",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Programming Languages", "Machine Learning", "Other"],
+  "keywords": ["ai", "chat", "copilot", "assistant", "guidewire", "gpt", "gemini"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "smartai-sidebar",
+          "title": "SmartAI",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "smartai-sidebar": [
+        { "id": "smartai.chatView", "name": "SmartAI Chat", "type": "webview" }
+      ]
+    },
+    "commands": [
+      { "command": "smartai.explainCode", "title": "SmartAI: Explain Selected Code" },
+      { "command": "smartai.generateTests", "title": "SmartAI: Generate Tests" },
+      { "command": "smartai.fixBug", "title": "SmartAI: Fix Bug in Selection" },
+      { "command": "smartai.refactor", "title": "SmartAI: Refactor Selection" },
+      { "command": "smartai.guidewireQA", "title": "SmartAI: Guidewire QA Helper" },
+      { "command": "smartai.askAboutSelection", "title": "SmartAI: Ask About Selection" },
+      { "command": "smartai.newChat", "title": "SmartAI: New Chat" }
+    ],
+    "menus": {
+      "editor/context": [
+        { "command": "smartai.explainCode", "when": "editorHasSelection", "group": "smartai@1" },
+        { "command": "smartai.generateTests", "when": "editorHasSelection", "group": "smartai@2" },
+        { "command": "smartai.fixBug", "when": "editorHasSelection", "group": "smartai@3" },
+        { "command": "smartai.refactor", "when": "editorHasSelection", "group": "smartai@4" },
+        { "command": "smartai.askAboutSelection", "when": "editorHasSelection", "group": "smartai@5" }
+      ]
+    },
+    "configuration": {
+      "title": "SmartAI",
+      "properties": {
+        "smartai.endpoint": {
+          "type": "string",
+          "default": "https://cqiilccyfofzdemnfhqx.supabase.co/functions/v1/chat",
+          "description": "SmartAI chat endpoint URL."
+        },
+        "smartai.publishableKey": {
+          "type": "string",
+          "default": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxaWlsY2N5Zm9memRlbW5maHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NTM0NzgsImV4cCI6MjA4ODUyOTQ3OH0.HLk30x72DYMIUrk-U83v-ft5pj2mB2qAzqXLZNDjtKU",
+          "description": "Public API key for the SmartAI backend."
+        },
+        "smartai.model": {
+          "type": "string",
+          "default": "google/gemini-3-flash-preview",
+          "enum": [
+            "google/gemini-3-flash-preview",
+            "google/gemini-2.5-pro",
+            "google/gemini-2.5-flash",
+            "google/gemini-2.5-flash-lite",
+            "openai/gpt-5",
+            "openai/gpt-5-mini",
+            "openai/gpt-5-nano",
+            "openai/gpt-5.2"
+          ],
+          "description": "Model to use for chat."
+        },
+        "smartai.includeProjectContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include workspace framework / project context (package.json, tsconfig, file tree) in prompts."
+        },
+        "smartai.maxContextFiles": {
+          "type": "number",
+          "default": 8,
+          "description": "Maximum number of open editor files to include as context."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.4.0"
+  }
+}
